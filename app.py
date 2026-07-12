@@ -43,6 +43,14 @@ def create_app() -> Flask:
     Session(app)
     app.register_blueprint(quiz_bp)
 
+    # キャッシュ無効化：すべてのレスポンスにno-cacheヘッダーを追加
+    @app.after_request
+    def set_no_cache(response):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+
     @app.context_processor
     def inject_team_points():
         from flask import session

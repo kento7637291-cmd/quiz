@@ -75,6 +75,9 @@ def login():
                 return redirect(url_for("quiz.login"))
 
             session.clear()
+            session.permanent = True
+            if hasattr(session, 'regenerate'):
+                session.regenerate()
             session["is_admin"] = True
             session["name"] = "管理者"
             flash("管理者としてログインしました。", "success")
@@ -91,6 +94,9 @@ def login():
                     db.session.commit()
 
                 session.clear()
+                session.permanent = True
+                if hasattr(session, 'regenerate'):
+                    session.regenerate()
                 session["team_id"] = team.team_id
                 session["team_name"] = team.team_name
                 flash(f"{team.team_name}として参加しました！", "success")
