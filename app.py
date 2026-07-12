@@ -5,6 +5,7 @@ eventlet.monkey_patch()
 import os
 import logging
 from flask import Flask
+from flask_session import Session
 from extensions import db, socketio
 from controller.controllers import quiz_bp
 
@@ -27,8 +28,19 @@ def create_app() -> Flask:
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = "quiz-bet-event-secret-2026"
 
+    # サーバーサイドセッション設定
+    session_path = os.path.join(instance_path, 'sessions')
+    if not os.path.exists(session_path):
+        os.makedirs(session_path)
+    app.config["SESSION_TYPE"] = "filesystem"
+    app.config["SESSION_PERMANENT"] = True
+    app.config["PERMANENT_SESSION_LIFETIME"] = 86400 * 7  # 7 days
+    app.config["SESSION_FILE_DIR"] = session_path
+    app.config["SESSION_FILE_THRESHOLD"] = 100
+
     db.init_app(app)
     socketio.init_app(app)
+    Session(app)
     app.register_blueprint(quiz_bp)
 
     @app.context_processor
