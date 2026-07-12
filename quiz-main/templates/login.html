@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}アリーナ入場 - 新卒交流会{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center min-vh-75">
+    <div class="col-md-6 col-lg-5">
+        <div class="neon-card shadow-lg p-5 rounded-5 border border-secondary text-center">
+            <div class="mb-4">
+                <i class="bi bi-fire text-gradient display-3 mb-2 d-inline-block"></i>
+                <h1 class="h2 fw-bold text-white font-outfit text-gradient">NEW GENERATION BATTLE</h1>
+                <p class="text-muted">チームを選択してアリーナに入場してください</p>
+            </div>
+            
+            <form action="{{ url_for('quiz.login') }}" method="POST">
+                <input type="hidden" name="role" id="loginRole" value="team">
+                
+                <div id="teamSelectGroup" class="mb-4 text-start">
+                    <label for="team_id" class="form-label text-white-50 small"><i class="bi bi-people me-1"></i>あなたのチーム</label>
+                    <select class="form-select bg-dark border-secondary text-white rounded-3 py-2.5 mb-3" id="team_id" name="team_id" onchange="updateTeamNameInput()">
+                        {% for t in teams %}
+                            <option value="{{ t.team_id }}" data-raw-name="{{ t.team_name }}">
+                                チーム {{ t.team_id }} （現在の登録名: {{ t.team_name }}）
+                            </option>
+                        {% endfor %}
+                    </select>
+                    
+                    <label for="team_name_suffix" class="form-label text-white-50 small"><i class="bi bi-pencil-square me-1"></i>チーム名（自由に書き換え可能）</label>
+                    <input type="text" class="form-control bg-dark border-secondary text-white rounded-3 py-2.5" id="team_name_suffix" name="team_name_suffix" placeholder="チーム名を入力または修正してください">
+                </div>
+
+                <div id="adminPasswordGroup" class="mb-4 text-start" style="display: none;">
+                    <label for="admin_password" class="form-label text-white-50 small"><i class="bi bi-key me-1"></i>管理者パスワード</label>
+                    <input type="password" class="form-control bg-dark border-secondary text-white rounded-3 py-2.5" id="admin_password" name="admin_password" placeholder="パスワードを入力してください">
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100 rounded-pill py-2.5 fw-bold font-outfit mb-3 shadow-neon">
+                    アリーナに入場する <i class="bi bi-box-arrow-in-right ms-1"></i>
+                </button>
+            </form>
+            
+            <div class="d-flex justify-content-center mt-4 text-xs">
+                <button type="button" id="adminToggleBtn" class="btn btn-link btn-xs text-muted text-decoration-none" onclick="toggleAdminMode()">
+                    <i class="bi bi-shield-lock me-1"></i>司会・管理者はこちら
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // プルダウンの選択状況をテキストボックスに100%安全に同期させる関数
+    function updateTeamNameInput() {
+        const select = document.getElementById('team_id');
+        if (!select || select.selectedIndex === -1) return;
+        
+        // 現在「クリックされて選択されている」option要素をピンポイントで取得（ズレの発生を防止）
+        const selectedOption = select.options[select.selectedIndex];
+        let rawName = selectedOption.getAttribute('data-raw-name') || '';
+        const nameInput = document.getElementById('team_name_suffix');
+        
+        if (!nameInput) return;
+
+        // 初期値の「チーム 1」「チーム 2」のまま（まだ誰もチーム名カスタムを入力していない）状態の場合、
+        // テキストボックスを空白にして、自由に新しい名前を気持ちよく打ち込めるように誘導する
+        const defaultPattern = /^チーム\s*\d+$/;
+        
+        if (defaultPattern.test(rawName.trim())) {
+            nameInput.value = ''; // 初期設定の番号名なら空にする
+        } else {
+            nameInput.value = rawName.trim(); // すでにカスタムされたチーム名があるならそれをそのまま一発で注入
+        }
+    }
+
+    function toggleAdminMode() {
+        const roleInput = document.getElementById('loginRole');
+        const teamGroup = document.getElementById('teamSelectGroup');
+        const adminGroup = document.getElementById('adminPasswordGroup');
+        const toggleBtn = document.getElementById('adminToggleBtn');
+        const btn = document.querySelector('button[type="submit"]');
+        
+        if (roleInput.value === 'team') {
+            roleInput.value = 'admin';
+            teamGroup.style.display = 'none';
+            adminGroup.style.display = 'block';
+            btn.innerHTML = '管理者として入場する <i class="bi bi-shield-lock ms-1"></i>';
+            toggleBtn.innerHTML = '<i class="bi bi-people me-1"></i>チーム選択に戻る';
+        } else {
+            roleInput.value = 'team';
+            teamGroup.style.display = 'block';
+            adminGroup.style.display = 'none';
+            btn.innerHTML = 'アリーナに入場する <i class="bi bi-box-arrow-in-right ms-1"></i>';
+            toggleBtn.innerHTML = '<i class="bi bi-shield-lock me-1"></i>司会・管理者はこちら';
+        }
+    }
+
+    // 初回ページ読み込み（初期表示）時にも、1番最初のチームのデータをテキストボックスに即座に反映させる
+    document.addEventListener('DOMContentLoaded', function() {
+        updateTeamNameInput();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,236 @@
+/* Theme Colors */
+:root {
+    --bg-dark: #07050e;
+    --bg-card: rgba(16, 12, 30, 0.65);
+    --border-card: rgba(255, 255, 255, 0.06);
+    --accent-purple: #8b5cf6;
+    --accent-pink: #d946ef;
+    --accent-cyan: #06b6d4;
+    
+    --color-gold: #fbbf24;
+    --color-silver: #e5e7eb;
+    --color-bronze: #d97706;
+}
+
+/* Global Styles */
+body {
+    background-color: var(--bg-dark);
+    background-image: 
+        radial-gradient(at 10% 20%, rgba(139, 92, 246, 0.1) 0px, transparent 50%),
+        radial-gradient(at 90% 80%, rgba(217, 70, 239, 0.08) 0px, transparent 50%);
+    background-attachment: fixed;
+    color: #e2e8f0;
+    font-family: 'Inter', -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.font-outfit {
+    font-family: 'Outfit', sans-serif;
+}
+
+.font-dela {
+    font-family: 'Dela Gothic One', sans-serif;
+}
+
+/* Typography Gradient */
+.text-gradient {
+    background: linear-gradient(135deg, #a78bfa 0%, #f472b6 50%, #22d3ee 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Navigation bar */
+.navbar {
+    background-color: rgba(7, 5, 14, 0.85) !important;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.brand-text {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 900;
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+}
+
+.nav-link {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #94a3b8 !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 99px;
+    transition: all 0.2s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+    color: #ffffff !important;
+    background-color: rgba(139, 92, 246, 0.12);
+}
+
+.points-badge {
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.15);
+}
+
+/* Glassmorphism Cards */
+.glass-card {
+    background-color: var(--bg-card);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border-card);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+}
+
+.neon-card {
+    background-color: rgba(20, 15, 38, 0.8);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 25px rgba(139, 92, 246, 0.12);
+}
+
+/* Sub-Badges */
+.step-badge {
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.35);
+    color: #c084fc;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+/* Buttons */
+.btn-primary {
+    background: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%);
+    border: none;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #c084fc 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(217, 70, 239, 0.3);
+}
+
+.shadow-neon {
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+}
+
+.shadow-neon-small {
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.25);
+}
+
+/* Quiz Choice Buttons */
+.choice-btn {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    background-color: rgba(255, 255, 255, 0.02);
+    transition: all 0.2s ease;
+}
+
+.choice-btn:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    transform: translateX(4px);
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.choice-letter {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+/* Selected choice state */
+.choice-btn.active {
+    background-color: rgba(6, 182, 212, 0.08) !important;
+    border-color: var(--accent-cyan) !important;
+}
+
+/* Bet Prediction Radios */
+.btn-check:checked + label {
+    background-color: rgba(139, 92, 246, 0.15) !important;
+    border-color: var(--accent-purple) !important;
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+}
+
+/* Leaderboard Rank Rows */
+.rank-row {
+    transition: transform 0.2s ease;
+}
+.rank-row:hover {
+    transform: scale(1.01);
+}
+
+.shadow-gold {
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.15);
+}
+.shadow-silver {
+    box-shadow: 0 0 20px rgba(243, 244, 246, 0.08);
+}
+.shadow-bronze {
+    box-shadow: 0 0 20px rgba(217, 119, 6, 0.08);
+}
+
+.bg-gold-subtle { background-color: rgba(251, 191, 36, 0.04) !important; }
+.bg-silver-subtle { background-color: rgba(243, 244, 246, 0.02) !important; }
+.bg-bronze-subtle { background-color: rgba(217, 119, 6, 0.02) !important; }
+
+.bg-purple { background-color: rgba(139, 92, 246, 0.2) !important; color: #d8b4fe !important; }
+.bg-dark-50 { background-color: rgba(0, 0, 0, 0.35) !important; }
+.text-accent { color: #f472b6 !important; }
+
+/* Custom Badge states */
+.bg-success-50 { background-color: rgba(16, 185, 129, 0.15); color: #34d399; }
+.bg-danger-50 { background-color: rgba(239, 68, 68, 0.15); color: #f87171; }
+.bg-warning-50 { background-color: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.bg-secondary-50 { background-color: rgba(255, 255, 255, 0.1); color: #cbd5e1; }
+
+.icon-circle {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Animations */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .6; }
+}
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Form controls styling */
+.form-control:focus, .form-select:focus {
+    background-color: #0b0817 !important;
+    border-color: var(--accent-purple) !important;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.2) !important;
+    color: white !important;
+}
+
+/* Utilities */
+.text-xs { font-size: 0.8rem; }
+.text-2xs { font-size: 0.72rem; }
+.text-3xs { font-size: 0.62rem; }
+.min-vh-75 { min-height: 75vh; }
+.flex-grow-1 { flex: 1 0 auto; }
+.bg-bronze { background-color: var(--color-bronze) !important; }
+
+.whitespace-nowrap {
+    white-nowrap: nowrap;
+}
+.btn-xs {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+}
+.border-gradient-subtle {
+    border-color: rgba(139, 92, 246, 0.15) !important;
+}

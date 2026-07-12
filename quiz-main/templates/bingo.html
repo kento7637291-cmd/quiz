@@ -1,0 +1,392 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_bingo_activated %}ビンゴ：共通点探し{% else %}？？？？{% endif %} - 新卒交流会{% endblock %}
+
+{% block extra_css %}
+<style>
+    .bingo-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 2rem;
+    }
+    .bingo-cell {
+        aspect-ratio: 1 / 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 10px;
+        text-align: center;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+    .bingo-cell.pending {
+        background: rgba(255, 193, 7, 0.1);
+        border: 2px solid #ffc107;
+    }
+    .bingo-cell.approved {
+        background: rgba(40, 167, 69, 0.2);
+        border: 2px solid #28a745;
+        box-shadow: 0 0 15px rgba(40, 167, 69, 0.4);
+    }
+    .bingo-cell.approved::after {
+        content: '\F26E'; /* Bootstrap Icon bi-check-circle-fill */
+        font-family: bootstrap-icons;
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        font-size: 1.2rem;
+        color: #28a745;
+    }
+    .bingo-cell.free-cell {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(217, 70, 239, 0.25) 100%);
+        border: 2px solid var(--accent-purple);
+        box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+        cursor: not-allowed;
+    }
+    .bingo-cell.rejected {
+        background: rgba(220, 53, 69, 0.1);
+        border: 2px solid #dc3545;
+    }
+    .bingo-cell.empty {
+        background: rgba(255, 255, 255, 0.05);
+        border: 2px dashed rgba(255, 255, 255, 0.2);
+    }
+    .bingo-cell:not(.free-cell):hover {
+        transform: translateY(-3px);
+        background: rgba(255, 255, 255, 0.1);
+    }
+    .theme-text {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 5px;
+    }
+    .content-text {
+        font-weight: bold;
+        font-size: 0.85rem;
+        word-break: break-all;
+        line-height: 1.2;
+    }
+    .names-text {
+        font-size: 0.72rem;
+        color: var(--accent-cyan);
+        margin-top: 4px;
+        font-weight: 500;
+        word-break: break-all;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        {% if is_bingo_activated %}
+            <h2 class="h3 fw-bold text-white font-outfit mb-2 text-gradient">
+                <i class="bi bi-grid-3x3-gap me-2"></i>Mind SHIFT BINGO
+            </h2>
+            <p class="text-white-50">
+                お題に沿ったチームの共通点と、その共通点を持つ<strong>2人の名前</strong>を見つけよう！    <br>
+                名前を使えるのは1人につき2マスまで！
+                マスを埋めてビンゴを達成すると、ボーナスポイントが獲得できます。
+            </p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+        {% if not is_bingo_activated %}
+            <div class="glass-card shadow-lg p-4 p-md-5 rounded-5 border border-secondary text-center position-relative overflow-hidden">
+                <div class="py-5">
+                    <span class="badge bg-secondary text-white px-3 py-2 rounded-pill fw-bold mb-3">LOCKED</span>
+                    <h2 class="h3 fw-bold text-white mb-4 font-outfit">？？？？？？？？</h2>
+                    <div class="icon-circle bg-dark-50 text-muted mx-auto mb-4" style="width: 80px; height: 80px; font-size: 2.5rem;">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <h3 class="h4 fw-bold text-white mb-2 font-outfit">情報公開までお待ちください。</h3>
+                    <p class="text-muted mb-4">
+                        MCが<strong>Mind SHIFT BINGOのスタートボタンを押した時点</strong>で、ビンゴ画面が自動的に解禁されます。<br>
+                        アナウンスがあるまで、このまましばらくお待ちください。
+                    </p>
+                    <div class="d-inline-block px-3 py-1 rounded-pill bg-dark border border-secondary text-xs text-muted">
+                        画面の切り替えはリアルタイムに行われるため、リロードは不要です。
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="glass-card shadow-lg p-4 rounded-4 border border-secondary">
+            <div class="bingo-grid">
+                {% for theme in themes %}
+                    {% set square = square_map.get(theme.position) %}
+                    
+                    {% if theme.position == 5 %}
+                        <div class="bingo-cell free-cell">
+                            <span class="theme-text text-warning">#5 FREE</span>
+                            <span class="content-text text-white font-outfit fw-black tracking-widest">★ FREE ★</span>
+                            <span class="badge bg-purple mt-2" style="font-size: 0.6rem;">解放済</span>
+                        </div>
+                    {% else %}
+                        <div class="bingo-cell {% if square %}{{ square.status }}{% else %}empty{% endif %}" 
+                             {% if not square or square.status != 'approved' %}
+                                 data-bs-toggle="modal" data-bs-target="#submitModal" 
+                             {% endif %}
+                             data-position="{{ theme.position }}" data-theme="{{ theme.theme_text }}"
+                             data-content="{% if square %}{{ square.content }}{% endif %}">
+                            
+                            <span class="theme-text">#{{ theme.position }} {{ theme.theme_text }}</span>
+                            
+                            {% if square %}
+                                {% if '（' in square.content and '）' in square.content %}
+                                    {% set parts = square.content.split('（') %}
+                                    <span class="content-text text-white">{{ parts[0] }}</span>
+                                    <span class="names-text"><i class="bi bi-people-fill me-0.5"></i>{{ parts[1].replace('）', '') }}</span>
+                                {% else %}
+                                    <span class="content-text text-white">{{ square.content }}</span>
+                                {% endif %}
+
+                                <span class="badge {% if square.status == 'approved' %}bg-success{% elif square.status == 'pending' %}bg-warning text-dark{% else %}bg-danger{% endif %} mt-2" style="font-size: 0.6rem;">
+                                    {% if square.status == 'approved' %}承認済{% elif square.status == 'pending' %}承認待ち{% else %}再提出{% endif %}
+                                </span>
+                            {% else %}
+                                <i class="bi bi-plus-lg text-muted mt-2"></i>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            <div class="text-center">
+                <div class="d-flex justify-content-center gap-3 mb-2">
+                    <span class="text-white-50 text-xs"><i class="bi bi-square-fill text-success me-1"></i>承認済</span>
+                    <span class="text-white-50 text-xs"><i class="bi bi-square-fill text-warning me-1"></i>承認待ち</span>
+                    <span class="text-white-50 text-xs"><i class="bi bi-square-fill text-danger me-1"></i>却下/再提出</span>
+                </div>
+                <p class="text-muted text-3xs">※ 真ん中以外のマスをクリックして共通点と該当者2人を投稿してください。MCが承認するとポイント加算されます。</p>
+            </div>
+            </div>
+        {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="submitModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-secondary rounded-4">
+            <form action="{{ url_for('quiz.bingo') }}" method="POST" id="bingoSubmitForm">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-white fw-bold">共通点を投稿</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="position" id="modalPosition">
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-white-50 small">お題</label>
+                        <p class="text-white fw-bold" id="modalThemeText"></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="modalContentInput" class="form-label text-white-50 small">見つけた共通点</label>
+                        <input type="text" class="form-control bg-dark-50 border-secondary text-white rounded-3 py-2" id="modalContentInput" placeholder="例: カレーは辛口派" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="modalNamesInput" class="form-label text-white-50 small">共通点があった2人の名前</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <input type="text" class="form-control bg-dark-50 border-secondary text-white rounded-3 py-2" id="modalName1" placeholder="1人目の名前" required>
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control bg-dark-50 border-secondary text-white rounded-3 py-2" id="modalName2" placeholder="2人目の名前" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="content" id="finalContent">
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-neon">送信する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const submitModal = document.getElementById('submitModal');
+    if (submitModal) {
+        submitModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const position = button.getAttribute('data-position');
+            const theme = button.getAttribute('data-theme');
+            const rawContent = button.getAttribute('data-content') || '';
+
+            const modalPosition = submitModal.querySelector('#modalPosition');
+            const modalThemeText = submitModal.querySelector('#modalThemeText');
+            const modalContentInput = submitModal.querySelector('#modalContentInput');
+            const modalName1 = submitModal.querySelector('#modalName1');
+            const modalName2 = submitModal.querySelector('#modalName2');
+
+            modalPosition.value = position;
+            modalThemeText.textContent = `#${position} ${theme}`;
+            
+            if (rawContent && rawContent.includes('（') && rawContent.includes(' & ')) {
+                const parts = rawContent.split('（');
+                modalContentInput.value = parts[0].trim();
+                const names = parts[1].replace('）', '').split(' & ');
+                modalName1.value = names[0] ? names[0].trim() : '';
+                modalName2.value = names[1] ? names[1].trim() : '';
+            } else {
+                modalContentInput.value = rawContent;
+                modalName1.value = '';
+                modalName2.value = '';
+            }
+        });
+    }
+
+    document.getElementById('bingoSubmitForm')?.addEventListener('submit', function(e) {
+        const contentVal = document.getElementById('modalContentInput').value.trim();
+        const name1Val = document.getElementById('modalName1').value.trim();
+        const name2Val = document.getElementById('modalName2').value.trim();
+        
+        if (contentVal && name1Val && name2Val) {
+            document.getElementById('finalContent').value = `${contentVal}（${name1Val} & ${name2Val}）`;
+        } else {
+            e.preventDefault();
+            alert('共通点と2人分の名前をすべて入力してください！');
+        }
+    });
+
+    socket.on('bingo_update', (data) => {
+        location.reload();
+    });
+
+    socket.on('bingo_start', (data) => {
+        location.reload();
+    });
+
+    socket.on('bingo_stop', (data) => {
+        location.reload();
+    });
+
+    // ビンゴ達成エフェクト
+    socket.on('bingo_complete', (data) => {
+        playBingoCompleteEffect(data.team_name, data.lines);
+    });
+
+    function playBingoCompleteEffect(teamName, lines) {
+        // フラッシュ
+        const flash = document.createElement('div');
+        flash.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(40, 167, 69, 0.5);
+            z-index: 9999;
+            animation: jackpot-flash 0.5s ease-out;
+        `;
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 500);
+
+        // テキスト
+        const text = document.createElement('div');
+        text.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: #28a745;
+            text-shadow: 0 0 30px rgba(40, 167, 69, 0.8);
+            z-index: 9998;
+            animation: text-pop 0.6s ease-out;
+            font-family: 'Outfit', sans-serif;
+        `;
+        text.textContent = `🎉 ${teamName} ビンゴ達成！`;
+        document.body.appendChild(text);
+        setTimeout(() => text.remove(), 1500);
+
+        // ファンファーレ音
+        playBingoFanfare();
+
+        // コンフェッティ
+        createBingoConfetti();
+    }
+
+    function playBingoFanfare() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const now = audioContext.currentTime;
+
+            const notes = [
+                { freq: 523.25, start: 0, duration: 0.15 },
+                { freq: 659.25, start: 0.15, duration: 0.15 },
+                { freq: 783.99, start: 0.3, duration: 0.15 },
+                { freq: 1046.5, start: 0.45, duration: 0.3 },
+                { freq: 1174.66, start: 0.75, duration: 0.2 },
+            ];
+
+            notes.forEach(note => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                osc.frequency.value = note.freq;
+                gain.gain.setValueAtTime(0.3, now + note.start);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + note.start + note.duration);
+                osc.start(now + note.start);
+                osc.stop(now + note.start + note.duration);
+            });
+        } catch (e) {
+            console.log('Audio context error:', e);
+        }
+    }
+
+    function createBingoConfetti() {
+        const confettiCount = 60;
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: none;';
+        document.body.appendChild(overlay);
+
+        for (let i = 0; i < confettiCount; i++) {
+            const confetti = document.createElement('div');
+            confetti.style.cssText = `
+                position: fixed;
+                left: ${Math.random() * 100}%;
+                top: -10px;
+                width: 12px;
+                height: 12px;
+                background-color: ${['#28a745', '#fbbf24', '#0dcaf0', '#fd7e14'][Math.floor(Math.random() * 4)]};
+                border-radius: 50%;
+                z-index: 9999;
+                pointer-events: none;
+            `;
+
+            overlay.appendChild(confetti);
+
+            const duration = 2.5 + Math.random() * 1;
+            const delay = Math.random() * 0.5;
+            confetti.animate([
+                { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+                { transform: `translateY(${window.innerHeight}px) rotate(720deg)`, opacity: 0 }
+            ], {
+                duration: duration * 1000,
+                delay: delay * 1000,
+                easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+            });
+        }
+
+        setTimeout(() => overlay.remove(), 3500);
+    }
+</script>
+{% endblock %}

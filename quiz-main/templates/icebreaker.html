@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}アイスブレイク：共通点探し - 新卒交流会{% endblock %}
+
+{% block content %}
+<!-- Header Intro -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="neon-card shadow-sm p-4 rounded-4 border border-secondary text-center">
+            <h2 class="h3 fw-bold text-white font-outfit mb-2 text-gradient">
+                <i class="bi bi-chat-heart me-2"></i>アイスブレイク企画：共通点探し
+            </h2>
+            <p class="text-white-50 mb-0">
+                チームの8人全員に共通する項目を話し合って見つけよう！意外な共通点であるほど高得点かも？<br>
+                見つけたら、下の送信フォームからどんどん登録して全体にアピールしてください！
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Submit Form (Shown only if logged in as team) -->
+    {% if session.get('team_id') %}
+    <div class="col-md-5 col-lg-4">
+        <div class="glass-card shadow-lg p-4 rounded-4 border border-secondary">
+            <h3 class="h5 fw-bold text-white mb-3">
+                <i class="bi bi-plus-circle text-primary me-2"></i>共通点を登録
+            </h3>
+            
+            <form action="{{ url_for('quiz.icebreaker') }}" method="POST">
+                <div class="mb-4">
+                    <label for="content" class="form-label text-white-50 small">見つけた共通点</label>
+                    <textarea class="form-control bg-dark border-secondary text-white rounded-3" id="content" name="content" rows="3" placeholder="例: 全員ラーメンは固めが好き！&#10;例: 全員犬より猫派！" required></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100 rounded-pill py-2.5 fw-bold font-outfit shadow-neon">
+                    送信する <i class="bi bi-send-fill ms-1"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Live Ideas Board -->
+    <div class="col">
+        <div class="glass-card shadow-lg p-4 rounded-4 border border-secondary h-100">
+            <h3 class="h5 fw-bold text-white mb-3 text-gradient">
+                <i class="bi bi-eye text-primary me-2"></i>みんなの共通点ボード
+            </h3>
+            <p class="text-muted text-xs mb-4">現在、各チームが投稿した共通点がリアルタイムに一覧表示されています。</p>
+            
+            {% if ideas %}
+                <div class="row g-3">
+                    {% for idea in ideas %}
+                        <div class="col-sm-6">
+                            <div class="card bg-dark border-secondary p-3 rounded-4 h-100 shadow-sm border-gradient-subtle">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-purple px-2.5 py-1 rounded-pill text-xs">
+                                        <i class="bi bi-people-fill me-1"></i>{{ team_map[idea.team_id] }}
+                                    </span>
+                                    <span class="text-muted text-3xs font-outfit">IDEA #{{ idea.idea_id }}</span>
+                                </div>
+                                <p class="text-white fw-bold mb-0 text-sm py-1">
+                                    「{{ idea.content }}」
+                                </p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <!-- Empty State -->
+                <div class="text-center py-5">
+                    <div class="icon-circle bg-dark-50 text-muted mx-auto mb-3" style="width: 65px; height: 65px; font-size: 1.8rem;">
+                        <i class="bi bi-chat-left-dots"></i>
+                    </div>
+                    <p class="text-muted mb-0">まだ共通点は登録されていません。<br>チームで話し合って最初の共通点を見つけましょう！</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
