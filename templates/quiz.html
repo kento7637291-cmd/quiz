@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_q1_activated %}4択クイズ回答{% else %}？？？？{% endif %} - 新卒交流会{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center g-4">
+    <div class="col-lg-8">
+        <div class="glass-card shadow-lg p-4 p-md-5 rounded-5 border border-secondary text-center position-relative overflow-hidden">
+            
+            {% if not is_q1_activated %}
+                <div class="py-5">
+                    <span class="badge bg-secondary text-white px-3 py-2 rounded-pill fw-bold mb-3">LOCKED</span>
+                    <h2 class="h3 fw-bold text-white mb-4 font-outfit">？？？？？？？？</h2>
+                    <div class="icon-circle bg-dark-50 text-muted mx-auto mb-4" style="width: 80px; height: 80px; font-size: 2.5rem;">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <h3 class="h4 fw-bold text-white mb-2 font-outfit">情報公開までお待ちください。</h3>
+                    <p class="text-muted mb-4">
+                        MCが<strong>第1問の回答受付を開始した時点</strong>で、クイズ画面が自動的に解禁されます。<br>
+                        アナウンスがあるまで、このまましばらくお待ちください。
+                    </p>
+                    <div class="d-inline-block px-3 py-1 rounded-pill bg-dark border border-secondary text-xs text-muted">
+                        画面の切り替えはリアルタイムに行われるため、リロードは不要です。
+                    </div>
+                </div>
+            {% else %}
+                {% if question %}
+                    <div class="step-badge px-3 py-1 rounded-pill mb-4 d-inline-block font-outfit text-accent">
+                        QUESTION {{ question.question_num }}
+                    </div>
+                    
+                    <h2 class="h3 fw-bold text-white mb-4 lh-base font-outfit">
+                        {{ question.question_text }}
+                    </h2>
+                    
+                    {% if not submitted %}
+                        <form action="{{ url_for('quiz.quiz_view') }}" method="POST" id="quizForm" class="mt-4">
+                            <input type="hidden" name="quiz_id" value="{{ question.quiz_id }}">
+                            <input type="hidden" name="choice" id="selectedChoice" value="">
+                            
+                            <div class="row g-3 text-start">
+                                <div class="col-sm-6">
+                                    <button type="button" class="btn btn-outline-secondary choice-btn w-100 p-3 rounded-4 text-start d-flex align-items-center" onclick="selectChoice('A', {{ 'true' if question.is_multiple_choice else 'false' }}, this)">
+                                        <span class="choice-letter bg-primary text-white me-3">A</span>
+                                        <span class="choice-text text-white-50">{{ question.choice_a }}</span>
+                                    </button>
+                                </div>
+                                
+                                <div class="col-sm-6">
+                                    <button type="button" class="btn btn-outline-secondary choice-btn w-100 p-3 rounded-4 text-start d-flex align-items-center" onclick="selectChoice('B', {{ 'true' if question.is_multiple_choice else 'false' }}, this)">
+                                        <span class="choice-letter bg-success text-white me-3">B</span>
+                                        <span class="choice-text text-white-50">{{ question.choice_b }}</span>
+                                    </button>
+                                </div>
+                                
+                                <div class="col-sm-6">
+                                    <button type="button" class="btn btn-outline-secondary choice-btn w-100 p-3 rounded-4 text-start d-flex align-items-center" onclick="selectChoice('C', {{ 'true' if question.is_multiple_choice else 'false' }}, this)">
+                                        <span class="choice-letter bg-warning text-dark me-3">C</span>
+                                        <span class="choice-text text-white-50">{{ question.choice_c }}</span>
+                                    </button>
+                                </div>
+                                
+                                <div class="col-sm-6">
+                                    <button type="button" class="btn btn-outline-secondary choice-btn w-100 p-3 rounded-4 text-start d-flex align-items-center" onclick="selectChoice('D', {{ 'true' if question.is_multiple_choice else 'false' }}, this)">
+                                        <span class="choice-letter bg-danger text-white me-3">D</span>
+                                        <span class="choice-text text-white-50">{{ question.choice_d }}</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary rounded-pill px-5 py-2.5 fw-bold font-outfit mt-4 w-100 w-sm-auto shadow-neon" id="submitBtn" disabled>
+                                回答を送信する <i class="bi bi-arrow-right-short ms-1"></i>
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="submitted-state mt-4 p-4 rounded-4 bg-dark-50 border border-secondary">
+                            <div class="spinner-grow text-accent mb-3" role="status"></div>
+                            <h4 class="h5 text-white fw-bold mb-2">あなたのチームは回答を送信しました！</h4>
+                            <p class="text-muted text-sm mb-4">他のチームの送信およびMCによる正解発表をお待ちください。</p>
+                            
+                            <div class="d-inline-flex align-items-center justify-content-center gap-3 px-4 py-2 bg-dark rounded-pill border border-secondary">
+                                <span class="text-white-50 text-xs">選択した回答:</span>
+                                <span class="badge bg-purple px-3 py-2 rounded-pill font-outfit fs-6">
+                                    {{ submitted.selected_choice }} : 
+                                    {% for char in submitted.selected_choice %}
+                                        {% if char == 'A' %}{{ question.choice_a }}
+                                        {% elif char == 'B' %}{{ question.choice_b }}
+                                        {% elif char == 'C' %}{{ question.choice_c }}
+                                        {% elif char == 'D' %}{{ question.choice_d }}
+                                        {% endif %}{% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                </span>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="py-5">
+                        <div class="icon-circle bg-dark-50 text-muted mx-auto mb-4" style="width: 80px; height: 80px; font-size: 2.5rem;">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <h3 class="h4 fw-bold text-white mb-2 font-outfit">出題をお待ちください</h3>
+                        <p class="text-muted mb-4">現在、公開されている問題はありません。<br>MCが次のクイズを公開するまで、しばらくお待ちください。</p>
+                        <div class="d-inline-block px-3 py-1 rounded-pill bg-dark border border-secondary text-xs text-muted">
+                            ブラウザのリロードは不要です。画面を閉じるかリロードしてもデータは保持されます。
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="glass-card shadow-lg p-4 rounded-4 border border-secondary mb-4">
+            <h3 class="h6 fw-bold text-white-50 mb-3"><i class="bi bi-person-badge me-1"></i>あなたのチーム情報</h3>
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-white fw-bold font-outfit fs-5">{{ session.get('team_name') }}</div>
+                    <div class="text-muted text-xs mt-0.5">アリーナ参加中</div>
+                </div>
+                <div class="text-end">
+                    {% if is_ranking_visible %}
+                    <div class="text-white fw-bold font-outfit fs-3 text-gradient">{{ team_points }} <span class="text-accent text-xs">pt</span></div>
+                    <div class="text-muted text-xs">現在の総得点</div>
+                    {% else %}
+                    <div class="text-white fw-bold font-outfit fs-4 text-gradient">LOCKED</div>
+                    <div class="text-muted text-xs">ランキング集計中</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card shadow-lg p-4 rounded-4 border border-secondary">
+            <h3 class="h6 fw-bold text-white-50 mb-3"><i class="bi bi-info-circle me-1"></i>前回の問題の結果</h3>
+            
+            {% if is_q1_activated and last_revealed %}
+                <div class="card bg-dark border-secondary p-3 rounded-4">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="badge bg-secondary font-outfit text-3xs">QUESTION {{ last_revealed.question_num }}</span>
+                        {% if last_sub %}
+                            {% if last_sub.is_correct %}
+                                <span class="badge bg-success-50 text-success rounded-pill text-2xs fw-bold px-2.5"><i class="bi bi-check-circle-fill me-1"></i>正解 (+100pt)</span>
+                            {% else %}
+                                <span class="badge bg-danger-50 text-danger rounded-pill text-2xs fw-bold px-2.5"><i class="bi bi-x-circle-fill me-1"></i>不正解</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge bg-dark rounded-pill text-2xs text-muted">未回答</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-white fw-bold mb-3 text-xs">{{ last_revealed.question_text }}</p>
+                    
+                    <div class="p-2.5 bg-dark rounded-3 border border-secondary text-xs text-white-50">
+                        <span class="text-accent fw-bold me-1">正解は:</span> 
+                        <strong class="text-white">
+                            {{ last_revealed.correct_choice }} : 
+                            {% for char in last_revealed.correct_choice %}
+                                {% if char == 'A' %}{{ last_revealed.choice_a }}
+                                {% elif char == 'B' %}{{ last_revealed.choice_b }}
+                                {% elif char == 'C' %}{{ last_revealed.choice_c }}
+                                {% elif char == 'D' %}{{ last_revealed.choice_d }}
+                                {% endif %}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </strong>
+                        {% if last_sub %}
+                            <div class="mt-1.5 pt-1.5 border-top border-secondary text-2xs">
+                                あなたの回答: <strong class="text-white">{{ last_sub.selected_choice }}</strong>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <p class="text-muted text-xs mb-0 text-center py-4">正解発表済みの問題はありません。</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedChoices = [];
+
+    function selectChoice(letter, isMultiple, element) {
+        if (!isMultiple) {
+            document.querySelectorAll('.choice-btn').forEach(btn => {
+                btn.classList.remove('active', 'border-primary', 'shadow-neon-small');
+                btn.querySelector('.choice-letter').classList.remove('bg-purple');
+            });
+            element.classList.add('active', 'border-primary', 'shadow-neon-small');
+            document.getElementById('selectedChoice').value = letter;
+        } else {
+            if (element.classList.contains('active')) {
+                element.classList.remove('active', 'border-primary', 'shadow-neon-small');
+                selectedChoices = selectedChoices.filter(c => c !== letter);
+            } else {
+                element.classList.add('active', 'border-primary', 'shadow-neon-small');
+                selectedChoices.push(letter);
+            }
+            document.getElementById('selectedChoice').value = selectedChoices.join('');
+        }
+        
+        if (document.getElementById('selectedChoice').value.length > 0) {
+            document.getElementById('submitBtn').removeAttribute('disabled');
+        } else {
+            document.getElementById('submitBtn').setAttribute('disabled', 'true');
+        }
+    }
+
+    const submitBtn = document.getElementById('submitBtn');
+</script>
+{% endblock %}

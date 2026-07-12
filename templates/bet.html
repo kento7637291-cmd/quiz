@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_q5_revealed %}ベット企画{% else %}？？？？{% endif %} - 新卒交流会{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card bg-dark border-secondary text-white shadow-lg p-4 rounded-4">
+            
+            {% if not is_q5_revealed %}
+                <!-- Q5未発表時のマスク表示 -->
+                <div class="text-center py-5 text-muted">
+                    <span class="badge bg-secondary text-white px-3 py-2 rounded-pill fw-bold mb-3">LOCKED</span>
+                    <h2 class="h4 fw-bold text-white font-outfit mb-3">？？？？？？？？</h2>
+                    <div class="icon-circle bg-dark-50 text-muted mx-auto mb-4" style="width: 80px; height: 80px; font-size: 2.5rem;">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <p class="text-white-50 px-3">
+                        情報公開までお待ちください。
+                    </p>
+                    <div class="d-inline-block px-3 py-1 rounded-pill bg-dark border border-secondary text-xs text-muted mt-2">
+                        自動で切り替わりますので、ページのリロードは不要です。
+                    </div>
+                </div>
+            {% else %}
+                <!-- Q5発表済：通常のベット画面 -->
+                <div class="text-center mb-4">
+                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold mb-2">BETTING TIME</span>
+                    {% if event %}
+                        <h2 class="h4 fw-bold text-gradient font-outfit">{{ event.event_name }}</h2>
+                    {% else %}
+                        <h2 class="h4 fw-bold text-muted">現在、受付中のベット企画はありません</h2>
+                    {% endif %}
+                    <p class="text-muted small">現在のあなたの持ち点: <span class="text-warning fw-bold">{{ team_points }}</span> pt</p>
+                </div>
+
+                {% if event %}
+                    {% if submitted_bet %}
+                        <div class="alert alert-success border-success bg-dark-smooth text-center rounded-3 p-4">
+                            <i class="bi bi-check-circle-fill text-success display-5 mb-3 d-block"></i>
+                            <h4 class="alert-heading fw-bold">ベット完了</h4>
+                            <p class="mb-1">賭けたポイント: <strong class="text-warning">{{ submitted_bet.bet_points }} pt</strong></p>
+                            <p class="mb-0">あなたの味予想:<br><strong class="text-info fs-5">{{ submitted_bet.prediction }}</strong></p>
+                            <hr class="border-secondary my-3">
+                            <p class="text-muted small mb-0">司会者の結果発表をお待ちください。</p>
+                        </div>
+                    {% else %}
+                        <form action="{{ url_for('quiz.bet_view') }}" method="POST" id="betForm">
+                            <input type="hidden" name="event_id" value="{{ event.event_id }}">
+                            
+                            <div class="mb-4">
+                                <label for="bet_points" class="form-label text-white-50 small"><i class="bi bi-coin me-1"></i>賭けるポイント</label>
+                                <input type="number" class="form-control form-control-lg bg-dark border-secondary text-white text-center fw-bold font-outfit" 
+                                       id="bet_points" name="bet_points" min="1" max="{{ team_points }}" placeholder="ポイント数を入力" required>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-1" onclick="setBetRatio(0.25)">25%</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-1" onclick="setBetRatio(0.5)">50%</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-1" onclick="setBetRatio(0.75)">75%</button>
+                                    <button type="button" class="btn btn-xs btn-outline-warning py-1 fw-bold" onclick="setBetRatio(1.0)">ALL IN</button>
+                                </div>
+                            </div>
+
+                            {% if "格付け①" in event.event_name %}
+                                <div class="card bg-black border-secondary p-3 rounded-3 mb-4">
+                                    <h5 class="h6 text-warning fw-bold mb-3"><i class="bi bi-palette me-1"></i>各色が何味か予想してください</h5>
+                                    <input type="hidden" id="prediction" name="prediction" value="">
+                                    <input type="hidden" id="multiplier" name="multiplier" value="1.0"> 
+
+                                    {% set colors = [('赤色', 'danger'), ('青色', 'primary'), ('緑色', 'success'), ('黄色', 'warning')] %}
+                                    {% for color_name, badge in colors %}
+                                    <div class="row align-items-center mb-3">
+                                        <div class="col-4">
+                                            <span class="badge bg-{{ badge }} w-100 py-2 fs-6">{{ color_name }}</span>
+                                        </div>
+                                        <div class="col-8">
+                                            <select class="form-select bg-dark border-secondary text-white color-flavor-select" data-color="{{ color_name }}" required>
+                                                <option value="" disabled selected>味を選択してください</option>
+                                                <option value="イチゴ">イチゴ</option>
+                                                <option value="グレープ">グレープ</option>
+                                                <option value="巨峰">巨峰</option>
+                                                <option value="青りんご">青りんご</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="mb-4">
+                                    <label class="form-label text-white-50 small"><i class="bi bi-patch-question me-1"></i>あなたの予想選択肢</label>
+                                    <div class="row g-2">
+                                        {% for opt in options %}
+                                            <div class="col-6">
+                                                <input type="radio" class="btn-check" name="option_select" id="opt_{{ opt.option_id }}" 
+                                                       value="{{ opt.option_text }}" data-multiplier="{{ opt.multiplier }}" required>
+                                                <label class="btn btn-outline-secondary w-100 text-start p-2.5 rounded-3 h-100 d-flex flex-column justify-content-between" for="opt_{{ opt.option_id }}">
+                                                    <span class="text-white small fw-bold text-wrap mb-1">{{ opt.option_text }}</span>
+                                                    <span class="text-warning font-outfit text-xs fw-bold">{{ opt.multiplier }}倍</span>
+                                                </label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    <input type="hidden" id="prediction" name="prediction" value="">
+                                    <input type="hidden" id="multiplier" name="multiplier" value="2.0">
+                                </div>
+                            {% endif %}
+
+                            <button type="submit" class="btn btn-warning w-100 rounded-pill py-2.5 fw-bold text-dark shadow-neon font-outfit mt-2">
+                                予想をロックする <i class="bi bi-lock-fill ms-1"></i>
+                            </button>
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-hourglass-split display-3 mb-3 d-block"></i>
+                        <p class="mb-0">企画が開始されるまでしばらくそのままでお待ちください。</p>
+                    </div>
+                {% endif %}
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function setBetRatio(ratio) {
+        const maxPoints = parseInt("{{ team_points }}") || 0;
+        const input = document.getElementById('bet_points');
+        if (maxPoints > 0) {
+            input.value = Math.floor(maxPoints * ratio);
+        }
+    }
+
+    document.getElementById('betForm')?.addEventListener('submit', function(e) {
+        const flavorSelects = document.querySelectorAll('.color-flavor-select');
+        if (flavorSelects.length > 0) {
+            let answers = [];
+            let allSelected = true;
+            flavorSelects.forEach(select => {
+                if (!select.value) allSelected = false;
+                answers.push(`${select.getAttribute('data-color')}:${select.value}`);
+            });
+            
+            if (!allSelected) {
+                e.preventDefault();
+                alert('すべての色の味を選択してください！');
+                return;
+            }
+            document.getElementById('prediction').value = answers.join(', ');
+        } else {
+            const selectedRadio = document.querySelector('input[name="option_select"]:checked');
+            if (selectedRadio) {
+                document.getElementById('prediction').value = selectedRadio.value;
+                document.getElementById('multiplier').value = selectedRadio.getAttribute('data-multiplier');
+            }
+        }
+    });
+
+    // 管理者画面側での動きをキャッチして動的リロードさせる
+    socket.on('event_update', (data) => {
+        location.reload();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block title %}リアルタイムランキング - 新卒交流会{% endblock %}
+
+{% block extra_css %}
+<style>
+    .podium-container {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 3rem;
+        padding-top: 2rem;
+    }
+    .podium-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 120px;
+        position: relative;
+    }
+    .podium-base {
+        width: 100%;
+        border-radius: 12px 12px 0 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 15px 5px;
+        position: relative;
+    }
+    .podium-rank-1 { height: 160px; background: linear-gradient(180deg, rgba(251, 191, 36, 0.3) 0%, rgba(251, 191, 36, 0.1) 100%); border: 2px solid #fbbf24; border-bottom: none; }
+    .podium-rank-2 { height: 120px; background: linear-gradient(180deg, rgba(229, 231, 235, 0.2) 0%, rgba(229, 231, 235, 0.05) 100%); border: 2px solid #e5e7eb; border-bottom: none; }
+    .podium-rank-3 { height: 90px; background: linear-gradient(180deg, rgba(217, 119, 6, 0.2) 0%, rgba(217, 119, 6, 0.05) 100%); border: 2px solid #d97706; border-bottom: none; }
+    
+    .team-avatar {
+        width: 60px;
+        height: 60px;
+        background: #1e1b2e;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+        border: 2px solid rgba(255,255,255,0.1);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    .podium-rank-1 .team-avatar { border-color: #fbbf24; box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
+    
+    .crown {
+        position: absolute;
+        top: -25px;
+        font-size: 1.8rem;
+        color: #fbbf24;
+        filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.5));
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8 text-center">
+        <div class="mb-4">
+            <h2 class="h1 fw-bold text-white font-outfit text-gradient font-dela">LIVE RANKING</h2>
+            <p class="text-muted">栄光を掴むのはどのチームだ！？</p>
+        </div>
+        
+        {% if is_ranking_visible %}
+            {% if teams|length >= 3 %}
+            <div class="podium-container d-none d-sm-flex">
+                <div class="podium-item">
+                    <div class="team-avatar"><i class="bi bi-people"></i></div>
+                    <div class="text-white-50 small mb-1">
+                        <span class="badge bg-secondary py-0.5 px-1.5 text-2xs me-1 font-outfit">チーム {{ teams[1].team_id }}</span>
+                        <strong>{{ teams[1].team_name }}</strong>
+                    </div>
+                    <div class="podium-base podium-rank-2">
+                        <span class="font-dela fs-3 text-white">2</span>
+                        <span class="font-outfit fw-bold text-accent">{{ teams[1].points }}pt</span>
+                    </div>
+                </div>
+                <div class="podium-item" style="width: 140px;">
+                    <i class="bi bi-crown-fill crown animate-pulse"></i>
+                    <div class="team-avatar" style="width: 80px; height: 80px; font-size: 2rem;"><i class="bi bi-fire text-gradient"></i></div>
+                    <div class="text-white fw-bold mb-1">
+                        <span class="badge bg-warning text-dark py-0.5 px-1.5 text-2xs me-1 font-outfit">チーム {{ teams[0].team_id }}</span>
+                        <strong>{{ teams[0].team_name }}</strong>
+                    </div>
+                    <div class="podium-base podium-rank-1">
+                        <span class="font-dela fs-1 text-white">1</span>
+                        <span class="font-outfit fw-bold text-accent fs-4">{{ teams[0].points }}pt</span>
+                    </div>
+                </div>
+                <div class="podium-item">
+                    <div class="team-avatar"><i class="bi bi-people"></i></div>
+                    <div class="text-white-50 small mb-1">
+                        <span class="badge bg-secondary py-0.5 px-1.5 text-2xs me-1 font-outfit">チーム {{ teams[2].team_id }}</span>
+                        <strong>{{ teams[2].team_name }}</strong>
+                    </div>
+                    <div class="podium-base podium-rank-3">
+                        <span class="font-dela fs-4 text-white">3</span>
+                        <span class="font-outfit fw-bold text-accent">{{ teams[2].points }}pt</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="glass-card shadow-lg p-4 rounded-5 border border-secondary text-start mt-4">
+                <div class="d-flex flex-column gap-3">
+                    {% for team in teams %}
+                        {% set rank = loop.index %}
+                        <div class="rank-row d-flex align-items-center justify-content-between p-3 rounded-4 border 
+                             {% if rank == 1 %}border-warning bg-gold-subtle shadow-gold
+                             {% elif rank == 2 %}border-light bg-silver-subtle shadow-silver
+                             {% elif rank == 3 %}border-danger-subtle bg-bronze-subtle shadow-bronze
+                             {% else %}border-secondary bg-dark-50{% endif %}">
+                            
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rank-number-circle d-flex align-items-center justify-content-center fw-bold font-outfit fs-5
+                                     {% if rank == 1 %}bg-warning text-dark
+                                     {% elif rank == 2 %}bg-light text-dark
+                                     {% elif rank == 3 %}bg-bronze text-white
+                                     {% else %}bg-dark border border-secondary text-white-50{% endif %}"
+                                     style="width: 42px; height: 42px; border-radius: 50%;">
+                                    {{ rank }}
+                                </div>
+                                
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="badge bg-dark border border-secondary text-white-50 font-outfit px-2 py-1 text-xs">
+                                        チーム {{ team.team_id }}
+                                    </span>
+                                    <span class="team-name text-white fw-bold fs-5 font-outfit">{{ team.team_name }}</span>
+                                    
+                                    {% if rank == 1 %}
+                                        <span class="ms-1 text-warning text-2xs animate-pulse"><i class="bi bi-stars me-0.5"></i>TOP</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="text-end">
+                                <span class="points-value font-outfit fw-bold fs-4 text-gradient">{{ "{:,}".format(team.points) }}</span>
+                                <span class="text-accent text-xs font-outfit ms-1">pt</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <div class="glass-card shadow-lg p-5 rounded-5 border border-secondary text-center mt-5">
+                <div class="mb-4">
+                    <i class="bi bi-eye-slash text-gradient display-1 mb-2 d-inline-block"></i>
+                    <h2 class="h2 fw-bold text-white font-outfit">RANKING LOCKED</h2>
+                    <p class="text-muted fs-5">最終結果は表彰式で発表します！</p>
+                </div>
+                <div class="py-3 px-4 bg-dark-50 rounded-4 border border-secondary d-inline-block">
+                    <p class="text-white-50 mb-0"><i class="bi bi-stars text-warning me-2"></i>お楽しみに！</p>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="mt-4">
+            <a href="{{ url_for('quiz.index') }}" class="btn btn-outline-light rounded-pill px-4">
+                <i class="bi bi-arrow-left me-2"></i>戻る
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
