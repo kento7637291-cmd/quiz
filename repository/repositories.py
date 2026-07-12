@@ -9,6 +9,7 @@ from model.models import (
     BetEvent,
     TeamBet,
     BetOption,
+    OperationLog,
 )
 
 # Team Repositories
@@ -23,6 +24,20 @@ def update_team_points(team_id: int, points: int):
     if team:
         team.points = points
         db.session.commit()
+
+def add_team(team_name: str) -> Team:
+    team = Team(team_name=team_name, points=500)
+    db.session.add(team)
+    db.session.commit()
+    return team
+
+def remove_last_team():
+    last_team = Team.query.order_by(Team.team_id.desc()).first()
+    if last_team and last_team.team_id > 15:
+        db.session.delete(last_team)
+        db.session.commit()
+        return True
+    return False
 
 # Bingo Repositories
 def get_all_bingo_themes() -> list[BingoTheme]:
@@ -141,3 +156,13 @@ def get_options_for_event(event_id: int) -> list[BetOption]:
 
 def get_option_by_id(option_id: int) -> BetOption | None:
     return BetOption.query.get(option_id)
+
+# Operation Log Repositories
+def add_operation_log(action: str, details: str = None) -> OperationLog:
+    log = OperationLog(action=action, details=details)
+    db.session.add(log)
+    db.session.commit()
+    return log
+
+def get_recent_operation_logs(limit: int = 20) -> list[OperationLog]:
+    return OperationLog.query.order_by(OperationLog.timestamp.desc()).limit(limit).all()

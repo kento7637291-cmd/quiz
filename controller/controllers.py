@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from functools import wraps
 from usecase import usecases
@@ -40,7 +41,11 @@ def inject_game_status():
     q5 = QuizQuestion.query.filter_by(question_num=5).first()
     is_q5_revealed = q5.status == "revealed" if q5 else False
 
-    return dict(is_q1_activated=is_q1_activated, is_q5_revealed=is_q5_revealed)
+    from model.models import BingoTheme
+    bingo_theme = BingoTheme.query.filter_by(position=1).first()
+    is_bingo_activated = bingo_theme.is_active if bingo_theme else False
+
+    return dict(is_q1_activated=is_q1_activated, is_q5_revealed=is_q5_revealed, is_bingo_activated=is_bingo_activated)
 
 
 # Route: Index Redirect
@@ -300,6 +305,7 @@ def admin():
         options_map[e.event_id] = repositories.get_options_for_event(e.event_id)
 
     team_map = {t.team_id: t.team_name for t in teams}
+    operation_logs = repositories.get_recent_operation_logs(20)
 
     return render_template(
         "admin.html",
@@ -312,6 +318,7 @@ def admin():
         bets=bets,
         options_map=options_map,
         team_map=team_map,
+        operation_logs=operation_logs,
     )
 
 
@@ -325,6 +332,26 @@ def admin_approve_bingo(square_id: int):
         socketio.emit(
             "bingo_update", {"square_id": square_id, "status": status}, namespace="/"
         )
+
+        # ビンゴ達成判定
+        square = repositories.get_bingo_square_by_id(square_id)
+        if square and status == "approved":
+            team = repositories.get_team_by_id(square.team_id)
+            current_squares = repositories.get_bingo_squares_by_team(square.team_id)
+            approved_positions = {s.position for s in current_squares if s.status == "approved"} | {5}
+
+            from usecase.usecases import calculate_bingo_lines
+            lines = calculate_bingo_lines(approved_positions)
+
+            # ビンゴ達成（3ライン以上）
+            if lines >= 1:
+                socketio.emit(
+                    "bingo_complete",
+                    {"team_id": square.team_id, "team_name": team.team_name, "lines": lines},
+                    namespace="/"
+                )
+
+        repositories.add_operation_log("ビンゴマス承認", f"{team.team_name} #{ square.position if square else '?'}")
         flash(message, "success")
     else:
         flash(message, "danger")
@@ -343,6 +370,7 @@ def admin_activate_quiz(quiz_id: int):
     socketio.emit(
         "quiz_update", {"status": "active", "quiz_id": quiz_id}, namespace="/"
     )
+    repositories.add_operation_log("クイズ受付開始", f"第{quiz_id}問")
     flash(f"第 {quiz_id} 問の回答受付を開始しました！", "success")
     return redirect(url_for("quiz.admin"))
 
@@ -357,6 +385,7 @@ def admin_reveal_quiz(quiz_id: int):
         socketio.emit(
             "quiz_update", {"status": "revealed", "quiz_id": quiz_id}, namespace="/"
         )
+        repositories.add_operation_log("クイズ正解発表", f"第{quiz_id}問、{award_points}pt付与")
         flash(message, "success")
     else:
         flash(message, "danger")
@@ -469,7 +498,7 @@ def admin_reset():
         TeamBet.query.delete()
         BingoSquare.query.delete()
 
-        Team.query.filter(Team.team_id > 20).delete()
+        Team.query.filter(Team.team_id > 15).delete()
         db.session.flush()
 
         with db.session.no_autoflush:
@@ -483,10 +512,14 @@ def admin_reset():
         for e in repositories.get_all_events():
             e.status = "waiting"
 
+        from model.models import BingoTheme
+        for theme in BingoTheme.query.all():
+            theme.is_active = False
+
         db.session.commit()
         socketio.emit("reset_all", {}, namespace="/")
         flash(
-            "すべての企画データをリセットし、21チーム目以降の不要データを削除した上で、各チーム（1〜20）の持ち点とチーム名を初期化しました。",
+            "すべての企画データをリセットし、16チーム目以降の不要データを削除した上で、各チーム（1〜15）の持ち点とチーム名を初期化しました。",
             "success",
         )
     except Exception as e:
@@ -543,4 +576,151 @@ def admin_update_event(event_id):
         event.multiplier = request.form.get("multiplier", type=float)
         db.session.commit()
         flash(f"イベント「{event.event_name}」を更新しました。", "success")
+    return redirect(url_for("quiz.admin"))
+
+
+# Admin Action: Add Team
+@quiz_bp.route("/admin/team/add", methods=["POST"])
+@admin_required
+def admin_add_team():
+    teams = repositories.get_all_teams()
+    new_team_id = max([t.team_id for t in teams]) + 1 if teams else 1
+    new_team = repositories.add_team(f"チーム {new_team_id}")
+    socketio.emit(
+        "team_added",
+        {"team_id": new_team.team_id, "team_name": new_team.team_name},
+        namespace="/",
+    )
+    flash(f"チーム {new_team_id} を追加しました。", "success")
+    return redirect(url_for("quiz.admin"))
+
+
+# Admin Action: Remove Team
+@quiz_bp.route("/admin/team/remove", methods=["POST"])
+@admin_required
+def admin_remove_team():
+    teams = repositories.get_all_teams()
+    if len(teams) <= 1:
+        flash("最後のチームは削除できません。", "danger")
+        return redirect(url_for("quiz.admin"))
+
+    success = repositories.remove_last_team()
+    if success:
+        socketio.emit("team_removed", {}, namespace="/")
+        flash("最後のチームを削除しました。", "success")
+    else:
+        flash("初期チーム（1〜15）は削除できません。追加したチームのみ削除可能です。", "warning")
+    return redirect(url_for("quiz.admin"))
+
+
+# Admin Action: Start Bingo Game
+@quiz_bp.route("/admin/bingo/start", methods=["POST"])
+@admin_required
+def admin_start_bingo():
+    from model.models import BingoTheme
+
+    themes = BingoTheme.query.all()
+    for theme in themes:
+        theme.is_active = True
+
+    db.session.commit()
+    socketio.emit("bingo_start", {}, namespace="/")
+    flash("Mind SHIFT BINGOをスタートさせました！", "success")
+    return redirect(url_for("quiz.admin"))
+
+
+# Admin Action: Stop Bingo Game
+@quiz_bp.route("/admin/bingo/stop", methods=["POST"])
+@admin_required
+def admin_stop_bingo():
+    from model.models import BingoTheme
+
+    themes = BingoTheme.query.all()
+    for theme in themes:
+        theme.is_active = False
+
+    db.session.commit()
+    socketio.emit("bingo_stop", {}, namespace="/")
+    repositories.add_operation_log("Mind SHIFT BINGO停止")
+    flash("Mind SHIFT BINGOを停止させました。", "success")
+    return redirect(url_for("quiz.admin"))
+
+
+# Admin Action: Broadcast Message to All Teams
+@quiz_bp.route("/admin/broadcast", methods=["POST"])
+@admin_required
+def admin_broadcast():
+    message = request.form.get("message", "").strip()
+    if not message:
+        flash("メッセージを入力してください。", "danger")
+        return redirect(url_for("quiz.admin"))
+
+    socketio.emit("broadcast", {"message": message}, namespace="/")
+    repositories.add_operation_log("全チーム告知", f"メッセージ: {message[:50]}")
+    flash(f"全チームに告知を送信しました: {message}", "success")
+    return redirect(url_for("quiz.admin"))
+
+
+# Admin Action: Rollback Quiz Status
+@quiz_bp.route("/admin/quiz/<int:quiz_id>/rollback", methods=["POST"])
+@admin_required
+def admin_rollback_quiz(quiz_id: int):
+    q = repositories.get_question_by_id(quiz_id)
+    if not q:
+        flash("問題が見つかりません。", "danger")
+        return redirect(url_for("quiz.admin"))
+
+    old_status = q.status
+    if q.status == "revealed":
+        q.status = "hidden"
+    elif q.status == "active":
+        q.status = "hidden"
+    else:
+        flash("戻せる状態ではありません。", "warning")
+        return redirect(url_for("quiz.admin"))
+
+    db.session.commit()
+    repositories.add_operation_log(f"クイズロールバック", f"第{q.question_num}問: {old_status} → {q.status}")
+    socketio.emit("quiz_update", {"status": "hidden", "quiz_id": quiz_id}, namespace="/")
+    flash(f"第{q.question_num}問を {old_status} から {q.status} に戻しました。", "success")
+    return redirect(url_for("quiz.admin"))
+
+
+# Admin Action: Rollback Event Status
+@quiz_bp.route("/admin/event/<int:event_id>/rollback", methods=["POST"])
+@admin_required
+def admin_rollback_event(event_id: int):
+    event = repositories.get_event_by_id(event_id)
+    if not event:
+        flash("イベントが見つかりません。", "danger")
+        return redirect(url_for("quiz.admin"))
+
+    old_status = event.status
+    if event.status == "settled":
+        event.status = "closed"
+    elif event.status == "closed":
+        event.status = "betting"
+    else:
+        flash("戻せる状態ではありません。", "warning")
+        return redirect(url_for("quiz.admin"))
+
+    db.session.commit()
+    repositories.add_operation_log("ベットイベントロールバック", f"{event.event_name}: {old_status} → {event.status}")
+    socketio.emit("event_update", {"status": event.status, "event_id": event_id}, namespace="/")
+    flash(f"{event.event_name} を {old_status} から {event.status} に戻しました。", "success")
+    return redirect(url_for("quiz.admin"))
+
+
+# Admin Action: Start Bet Countdown
+@quiz_bp.route("/admin/event/<int:event_id>/countdown/<int:seconds>", methods=["POST"])
+@admin_required
+def admin_start_countdown(event_id: int, seconds: int):
+    event = repositories.get_event_by_id(event_id)
+    if not event:
+        flash("イベントが見つかりません。", "danger")
+        return redirect(url_for("quiz.admin"))
+
+    socketio.emit("bet_countdown", {"seconds": seconds}, namespace="/")
+    repositories.add_operation_log("ベットカウントダウン開始", f"{event.event_name}: {seconds}秒")
+    flash(f"{event.event_name} のカウントダウンを開始しました。", "success")
     return redirect(url_for("quiz.admin"))

@@ -113,6 +113,31 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- 全チーム告知モーダル -->
+    <div class="modal fade" id="broadcastModal" tabindex="-1" aria-labelledby="broadcastLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border-secondary rounded-4">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-white fw-bold" id="broadcastLabel">📢 MC からのお知らせ</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-white">
+                    <p id="broadcastMessage" class="mb-0" style="font-size: 1.1rem;"></p>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-primary rounded-pill px-4" data-bs-dismiss="modal">了解</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- リアルタイム更新トースト -->
+    <div id="updateToast" class="toast position-fixed bottom-0 end-0 m-3" role="alert" aria-live="assertive" aria-atomic="true" style="z-index: 9999;">
+        <div class="toast-body bg-info text-white rounded-3">
+            <i class="bi bi-arrow-repeat me-2"></i> 🔄 リアルタイム更新中...
+        </div>
+    </div>
+
     <footer class="footer mt-auto py-3">
         <div class="container text-center text-muted">
             <span class="text-xs">&copy; 2026 歴代新卒交流会 実行委員会. All rights reserved.</span>
@@ -123,23 +148,51 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         const socket = io();
-        
+
+        // トースト表示関数
+        function showUpdateToast() {
+            const toast = new bootstrap.Toast(document.getElementById('updateToast'));
+            toast.show();
+        }
+
+        // 全チーム告知
+        socket.on('broadcast', (data) => {
+            const modal = new bootstrap.Modal(document.getElementById('broadcastModal'));
+            document.getElementById('broadcastMessage').textContent = data.message || '';
+            modal.show();
+        });
+
         socket.on('reset_all', () => {
-            location.reload();
+            showUpdateToast();
+            setTimeout(() => location.reload(), 800);
         });
 
         socket.on('points_update', (data) => {
-            if (window.location.pathname.includes('/ranking')) {
-                location.reload();
-            }
-            const headerPoints = document.getElementById('headerPoints');
-            if (headerPoints) {
-                location.reload();
-            }
+            showUpdateToast();
+            setTimeout(() => {
+                if (window.location.pathname.includes('/ranking')) {
+                    location.reload();
+                }
+                const headerPoints = document.getElementById('headerPoints');
+                if (headerPoints) {
+                    location.reload();
+                }
+            }, 800);
         });
 
         socket.on('quiz_update', (data) => {
-            location.reload();
+            showUpdateToast();
+            setTimeout(() => location.reload(), 800);
+        });
+
+        socket.on('bingo_update', (data) => {
+            showUpdateToast();
+            setTimeout(() => location.reload(), 800);
+        });
+
+        socket.on('event_update', (data) => {
+            showUpdateToast();
+            setTimeout(() => location.reload(), 800);
         });
     </script>
     {% block extra_js %}{% endblock %}

@@ -55,6 +55,18 @@
         color: #fbbf24;
         filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.5));
     }
+
+    @keyframes flash-highlight {
+        0% { background-color: inherit; }
+        25% { background-color: rgba(251, 191, 36, 0.6); }
+        50% { background-color: rgba(251, 191, 36, 0.4); }
+        75% { background-color: rgba(251, 191, 36, 0.2); }
+        100% { background-color: inherit; }
+    }
+
+    .rank-row.flashing {
+        animation: flash-highlight 0.8s ease-in-out;
+    }
 </style>
 {% endblock %}
 
@@ -166,4 +178,26 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ランキング更新フラッシュアニメーション
+    socket.on('points_update', (data) => {
+        // すべてのrank-rowにフラッシュアニメーションを適用
+        const rankRows = document.querySelectorAll('.rank-row');
+        rankRows.forEach(row => {
+            row.classList.add('flashing');
+        });
+
+        // 0.8秒後にクラスを削除して、その後リロード
+        setTimeout(() => {
+            rankRows.forEach(row => {
+                row.classList.remove('flashing');
+            });
+            showUpdateToast();
+            setTimeout(() => location.reload(), 800);
+        }, 800);
+    });
+</script>
 {% endblock %}

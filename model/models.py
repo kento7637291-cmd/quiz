@@ -1,4 +1,5 @@
 from extensions import db
+from datetime import datetime
 
 
 class Team(db.Model):
@@ -27,6 +28,9 @@ class BingoTheme(db.Model):
     theme_text = db.Column(
         db.String(255), nullable=False
     )  # Question/Theme for this square
+    is_active = db.Column(
+        db.Boolean, default=False, nullable=False
+    )  # Whether bingo game is active/visible
 
 
 class BingoSquare(db.Model):
@@ -138,3 +142,12 @@ class TeamBet(db.Model):
     )
 
     event = db.relationship("BetEvent", backref="bets")
+
+
+class OperationLog(db.Model):
+    __tablename__ = "operation_logs"
+
+    log_id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    action = db.Column(db.String(200), nullable=False)
+    details = db.Column(db.String(500), nullable=True)
