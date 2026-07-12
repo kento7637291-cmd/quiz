@@ -1,6 +1,7 @@
 import re
+import uuid
 from datetime import datetime
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, make_response
 from functools import wraps
 from usecase import usecases
 from repository import repositories
@@ -10,9 +11,27 @@ from model.models import QuizQuestion, QuizSubmission, TeamBet, BingoSquare, Tea
 quiz_bp = Blueprint("quiz", __name__)
 
 
+def verify_window_id():
+    """ウィンドウID が一致しているかチェック。複数ウィンドウでのセッション混在を防止"""
+    stored_window_id = session.get("window_id")
+    if not stored_window_id:
+        return True  # ログイン前は検査しない
+
+    request_window_id = request.form.get("window_id") or request.args.get("window_id")
+    if request_window_id and request_window_id != stored_window_id:
+        # 異なるウィンドウからのアクセス→セッションをクリア
+        session.clear()
+        return False
+    return True
+
+
 def team_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        if not verify_window_id():
+            flash("セッションの検証に失敗しました。再度ログインしてください。", "warning")
+            return redirect(url_for("quiz.login"))
+
         if "team_id" not in session and not session.get("is_admin"):
             flash("チームを選択するか、管理者としてログインしてください。", "warning")
             return redirect(url_for("quiz.login"))
@@ -24,6 +43,10 @@ def team_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        if not verify_window_id():
+            flash("セッションの検証に失敗しました。再度ログインしてください。", "warning")
+            return redirect(url_for("quiz.login"))
+
         if not session.get("is_admin"):
             flash("管理者権限が必要です。", "danger")
             return redirect(url_for("quiz.login"))
@@ -76,12 +99,14 @@ def login():
 
             session.clear()
             session.permanent = True
-            if hasattr(session, 'regenerate'):
-                session.regenerate()
             session["is_admin"] = True
             session["name"] = "管理者"
+            session["window_id"] = str(uuid.uuid4())
+            session.modified = True
             flash("管理者としてログインしました。", "success")
-            return redirect(url_for("quiz.admin"))
+            resp = make_response(redirect(url_for("quiz.admin")))
+            resp.set_cookie("session", "", max_age=0)  # 古いセッションクッキーをクリア
+            return resp
         else:
             team_id = request.form.get("team_id", type=int)
             team_name_suffix = request.form.get("team_name_suffix", "").strip()
@@ -95,12 +120,14 @@ def login():
 
                 session.clear()
                 session.permanent = True
-                if hasattr(session, 'regenerate'):
-                    session.regenerate()
                 session["team_id"] = team.team_id
                 session["team_name"] = team.team_name
+                session["window_id"] = str(uuid.uuid4())
+                session.modified = True
                 flash(f"{team.team_name}として参加しました！", "success")
-                return redirect(url_for("quiz.bingo"))
+                resp = make_response(redirect(url_for("quiz.bingo")))
+                resp.set_cookie("session", "", max_age=0)  # 古いセッションクッキーをクリア
+                return resp
 
     teams = repositories.get_all_teams()
     return render_template("login.html", teams=teams)

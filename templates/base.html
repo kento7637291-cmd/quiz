@@ -147,6 +147,27 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
+        // ウィンドウごとに異なるIDを生成・保存（複数ウィンドウでのセッション混在防止）
+        function getWindowId() {
+            let windowId = sessionStorage.getItem('windowId');
+            if (!windowId) {
+                windowId = 'win_' + Math.random().toString(36).substr(2, 9);
+                sessionStorage.setItem('windowId', windowId);
+            }
+            return windowId;
+        }
+
+        // すべてのフォームにwindow_idを自動追加
+        document.addEventListener('submit', function(e) {
+            if (e.target && e.target.tagName === 'FORM') {
+                let input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'window_id';
+                input.value = getWindowId();
+                e.target.appendChild(input);
+            }
+        }, true);
+
         const socket = io();
 
         // トースト表示関数
