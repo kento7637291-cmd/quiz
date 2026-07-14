@@ -427,35 +427,11 @@
     }
 
     // ページ読み込み時にベット結果に応じて演出を実行
-    function executeResultAnimation() {
-        // まず localStorage から保存された結果を確認
-        const pendingResult = localStorage.getItem('bet_result_pending');
-        if (pendingResult) {
-            console.log('Found pending bet result in localStorage:', pendingResult);
-            try {
-                const result = JSON.parse(pendingResult);
-                localStorage.removeItem('bet_result_pending');
-
-                const isWin = result.status === 'won';
-                const payout = parseInt(result.payout) || 0;
-
-                // 少し遅れて演出を実行
-                setTimeout(() => {
-                    playJackpotEffect(isWin, payout);
-                }, 500);
-                return;
-            } catch (e) {
-                console.error('Error parsing pending result:', e);
-                localStorage.removeItem('bet_result_pending');
-            }
-        }
-
-        // localStorage にない場合は、ページ内の hidden input から取得
+    document.addEventListener('DOMContentLoaded', function() {
         const statusEl = document.getElementById('bet-status');
         const payoutEl = document.getElementById('bet-payout');
 
         if (statusEl && payoutEl) {
-            console.log('Result animation triggered:', statusEl.value, payoutEl.value);
             const isWin = statusEl.value === 'won';
             const payout = parseInt(payoutEl.value) || 0;
 
@@ -464,99 +440,72 @@
                 playJackpotEffect(isWin, payout);
             }, 500);
         }
-    }
+    });
 
-    // DOMContentLoaded と window.load の両方で実行
-    document.addEventListener('DOMContentLoaded', executeResultAnimation);
-    window.addEventListener('load', executeResultAnimation);
-
-    // ページ読み込み直後にも実行（キャッシュ対策）
-    setTimeout(executeResultAnimation, 100);
-
-    // 管理者画面側でのベット結果発表をキャッチ
+    // 管理者画面側でのベット結果発表をキャッチ（クイズと同じ流れ）
     socket.on('event_update', (data) => {
-        console.log('event_update received:', data);
-
-        if (data.status === 'settled') {
-            console.log('Showing result reveal animation...');
-
-            // 結果発表アニメーション
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes result-reveal-pop {
-                    0% { transform: scale(0.5); opacity: 0; }
-                    50% { transform: scale(1.15); }
-                    100% { transform: scale(1); opacity: 1; }
-                }
-
-                @keyframes result-reveal-fade-out {
-                    0% { opacity: 1; transform: scale(1); }
-                    100% { opacity: 0; transform: scale(0.5); }
-                }
-
-                .result-reveal-overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background-color: rgba(0, 0, 0, 0.7);
-                    z-index: 9997;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    pointer-events: none;
-                }
-
-                .result-reveal-text {
-                    font-size: 4rem;
-                    font-weight: bold;
-                    font-family: 'Outfit', sans-serif;
-                    color: #fbbf24;
-                    text-shadow: 0 0 40px rgba(251, 191, 36, 0.8);
-                    animation: result-reveal-pop 0.8s ease-out;
-                    letter-spacing: 3px;
-                }
-
-                .result-reveal-overlay.fade-out .result-reveal-text {
-                    animation: result-reveal-fade-out 0.4s ease-in;
-                }
-            `;
-            document.head.appendChild(style);
-
-            // オーバーレイを作成
-            const overlay = document.createElement('div');
-            overlay.className = 'result-reveal-overlay';
-            const text = document.createElement('div');
-            text.className = 'result-reveal-text';
-            text.textContent = '📢 結果発表！';
-            overlay.appendChild(text);
-            document.body.appendChild(overlay);
-
-            // 現在の結果情報をローカルストレージに保存（リロード後の演出用）
-            const statusEl = document.getElementById('bet-status');
-            const payoutEl = document.getElementById('bet-payout');
-            if (statusEl && payoutEl) {
-                localStorage.setItem('bet_result_pending', JSON.stringify({
-                    status: statusEl.value,
-                    payout: payoutEl.value
-                }));
+        // アニメーション用スタイル
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes result-reveal-pop {
+                0% { transform: scale(0.5); opacity: 0; }
+                50% { transform: scale(1.15); }
+                100% { transform: scale(1); opacity: 1; }
             }
 
-            // 0.8秒後にフェードアウト、その後リロード
+            @keyframes result-reveal-fade-out {
+                0% { opacity: 1; transform: scale(1); }
+                100% { opacity: 0; transform: scale(0.5); }
+            }
+
+            .result-reveal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                z-index: 9997;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                pointer-events: none;
+            }
+
+            .result-reveal-text {
+                font-size: 4rem;
+                font-weight: bold;
+                font-family: 'Outfit', sans-serif;
+                color: #fbbf24;
+                text-shadow: 0 0 40px rgba(251, 191, 36, 0.8);
+                animation: result-reveal-pop 0.6s ease-out;
+                letter-spacing: 3px;
+            }
+
+            .result-reveal-overlay.fade-out .result-reveal-text {
+                animation: result-reveal-fade-out 0.4s ease-in;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // オーバーレイを作成
+        const overlay = document.createElement('div');
+        overlay.className = 'result-reveal-overlay';
+        const text = document.createElement('div');
+        text.className = 'result-reveal-text';
+        text.textContent = '📢 結果発表！';
+        overlay.appendChild(text);
+        document.body.appendChild(overlay);
+
+        // 0.8秒後にフェードアウト、その後リロード
+        setTimeout(() => {
+            overlay.classList.add('fade-out');
             setTimeout(() => {
-                overlay.classList.add('fade-out');
-                setTimeout(() => {
-                    overlay.remove();
-                    showUpdateToast();
-                    // ページリロード（キャッシュをバイパス）
-                    window.location.href = window.location.href + '?nocache=' + Date.now();
-                }, 400);
-            }, 1200);
-        } else {
-            showUpdateToast();
-            setTimeout(() => location.reload(), 800);
-        }
+                overlay.remove();
+                showUpdateToast();
+                setTimeout(() => location.reload(), 800);
+            }, 400);
+        }, 800);
     });
 
     // ベット締切カウントダウン
