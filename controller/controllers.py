@@ -32,15 +32,39 @@ def verify_window_id():
     return True
 
 
+def verify_role(expected_role):
+    """URL の role パラメータと セッション役割が一致するか検証"""
+    role_param = request.args.get("role")
+
+    if not role_param:
+        # role パラメータがない場合はスキップ（通常の直接アクセス）
+        return True
+
+    # role パラメータと実際の役割を比較
+    if expected_role == "admin":
+        if role_param != "admin" or not session.get("is_admin"):
+            return False
+    elif expected_role == "team":
+        if role_param != "team" or not session.get("team_id"):
+            return False
+
+    return True
+
+
 def team_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # URL の role パラメータとセッション役割を検証
+        if not verify_role("team"):
+            flash("無効なアクセスです。再度ログインしてください。", "danger")
+            return redirect(url_for("quiz.login"))
+
         if not verify_window_id():
             flash("セッションの検証に失敗しました。再度ログインしてください。", "warning")
             return redirect(url_for("quiz.login"))
 
-        if "team_id" not in session and not session.get("is_admin"):
-            flash("チームを選択するか、管理者としてログインしてください。", "warning")
+        if "team_id" not in session:
+            flash("チームを選択してください。", "warning")
             return redirect(url_for("quiz.login"))
         return f(*args, **kwargs)
 
@@ -50,6 +74,11 @@ def team_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # URL の role パラメータとセッション役割を検証
+        if not verify_role("admin"):
+            flash("管理者権限が必要です。", "danger")
+            return redirect(url_for("quiz.login"))
+
         if not verify_window_id():
             flash("セッションの検証に失敗しました。再度ログインしてください。", "warning")
             return redirect(url_for("quiz.login"))
@@ -81,16 +110,21 @@ def inject_game_status():
 # Route: Index Redirect
 @quiz_bp.route("/", methods=["GET"])
 def index():
-    # リロード時にセッション検証
-    if not verify_window_id():
-        session.clear()
-        flash("セッションの検証に失敗しました。再度ログインしてください。", "warning")
-        return redirect(url_for("quiz.login"))
+    role = request.args.get("role")  # URL から role パラメータを取得
+
+    # role パラメータと実際のセッション役割を検証
+    if role:
+        if role == "admin" and not session.get("is_admin"):
+            flash("管理者権限が必要です。", "danger")
+            return redirect(url_for("quiz.login"))
+        if role == "team" and not session.get("team_id"):
+            flash("チームを選択してください。", "warning")
+            return redirect(url_for("quiz.login"))
 
     if session.get("is_admin"):
-        return redirect(url_for("quiz.admin"))
+        return redirect(url_for("quiz.admin") + "?role=admin")
     if "team_id" in session:
-        return redirect(url_for("quiz.bingo"))
+        return redirect(url_for("quiz.bingo") + "?role=team")
     return redirect(url_for("quiz.login"))
 
 
@@ -142,7 +176,7 @@ def login():
             session.modified = True
 
             flash("管理者としてログインしました。", "success")
-            return redirect(url_for("quiz.admin"))
+            return redirect(url_for("quiz.admin") + "?role=admin")
         else:
             team_id = request.form.get("team_id", type=int)
             team_name_suffix = request.form.get("team_name_suffix", "").strip()
@@ -173,7 +207,7 @@ def login():
                 session.modified = True
 
                 flash(f"{team.team_name}として参加しました！", "success")
-                return redirect(url_for("quiz.bingo"))
+                return redirect(url_for("quiz.bingo") + "?role=team")
 
     teams = repositories.get_all_teams()
     return render_template("login.html", teams=teams)
