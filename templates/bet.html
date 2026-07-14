@@ -110,15 +110,13 @@
                 </div>
             {% else %}
                 <!-- Q5発表済：通常のベット画面 -->
+                {% if event %}
                 <div class="text-center mb-4">
                     <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold mb-2">BETTING TIME</span>
-                    {% if event %}
-                        <h2 class="h4 fw-bold text-gradient font-outfit">{{ event.event_name }}</h2>
-                    {% else %}
-                        <h2 class="h4 fw-bold text-muted">現在、受付中のベット企画はありません</h2>
-                    {% endif %}
+                    <h2 class="h4 fw-bold text-gradient font-outfit">{{ event.event_name }}</h2>
                     <p class="text-muted small">現在のあなたの持ち点: <span class="text-warning fw-bold">{{ team_points }}</span> pt</p>
                 </div>
+                {% endif %}
 
                 {% if event %}
                     {% if submitted_bet %}

@@ -2,6 +2,61 @@
 
 {% block title %}{% if is_q1_activated %}4択クイズ回答{% else %}？？？？{% endif %} - 新卒交流会{% endblock %}
 
+{% block extra_css %}
+<style>
+    @keyframes correct-flash {
+        0%, 100% { background-color: rgba(0, 0, 0, 0); }
+        50% { background-color: rgba(34, 197, 94, 0.3); }
+    }
+
+    @keyframes incorrect-flash {
+        0%, 100% { background-color: rgba(0, 0, 0, 0); }
+        50% { background-color: rgba(239, 68, 68, 0.3); }
+    }
+
+    @keyframes correct-text-pop {
+        0% { transform: scale(0.5); opacity: 0; color: #22c55e; }
+        50% { transform: scale(1.15); }
+        100% { transform: scale(1); opacity: 1; color: #22c55e; }
+    }
+
+    @keyframes incorrect-text-pop {
+        0% { transform: scale(0.5); opacity: 0; color: #ef4444; }
+        50% { transform: scale(1.15); }
+        100% { transform: scale(1); opacity: 1; color: #ef4444; }
+    }
+
+    .correct-overlay {
+        animation: correct-flash 0.6s ease-out;
+    }
+
+    .incorrect-overlay {
+        animation: incorrect-flash 0.6s ease-out;
+    }
+
+    .result-text {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9998;
+        font-size: 4rem;
+        font-weight: bold;
+        font-family: 'Outfit', sans-serif;
+        text-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        pointer-events: none;
+    }
+
+    .result-text.correct {
+        animation: correct-text-pop 0.8s ease-out;
+    }
+
+    .result-text.incorrect {
+        animation: incorrect-text-pop 0.8s ease-out;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center g-4">
     <div class="col-lg-8">
@@ -147,9 +202,9 @@
                     <p class="text-white fw-bold mb-3 text-xs">{{ last_revealed.question_text }}</p>
                     
                     <div class="p-2.5 bg-dark rounded-3 border border-secondary text-xs text-white-50">
-                        <span class="text-accent fw-bold me-1">正解は:</span> 
+                        <span class="text-accent fw-bold me-1">正解は:</span>
                         <strong class="text-white">
-                            {{ last_revealed.correct_choice }} : 
+                            {{ last_revealed.correct_choice }} :
                             {% for char in last_revealed.correct_choice %}
                                 {% if char == 'A' %}{{ last_revealed.choice_a }}
                                 {% elif char == 'B' %}{{ last_revealed.choice_b }}
@@ -162,6 +217,11 @@
                             <div class="mt-1.5 pt-1.5 border-top border-secondary text-2xs">
                                 あなたの回答: <strong class="text-white">{{ last_sub.selected_choice }}</strong>
                             </div>
+                            {% if last_sub.is_correct %}
+                                <input type="hidden" id="result-status" value="correct">
+                            {% else %}
+                                <input type="hidden" id="result-status" value="incorrect">
+                            {% endif %}
                         {% endif %}
                     </div>
                 </div>
@@ -204,6 +264,162 @@
     }
 
     const submitBtn = document.getElementById('submitBtn');
+
+    // 正解・不正解アニメーション
+    function playCorrectEffect() {
+        // フラッシュ
+        const flash = document.createElement('div');
+        flash.className = 'correct-overlay';
+        flash.style.position = 'fixed';
+        flash.style.top = '0';
+        flash.style.left = '0';
+        flash.style.width = '100%';
+        flash.style.height = '100%';
+        flash.style.zIndex = '9999';
+        flash.style.pointerEvents = 'none';
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 600);
+
+        // テキスト演出
+        const text = document.createElement('div');
+        text.className = 'result-text correct';
+        text.textContent = '✨ 正解！ ✨';
+        document.body.appendChild(text);
+        setTimeout(() => text.remove(), 1500);
+
+        // ファンファーレ音
+        playCorrectSound();
+
+        // コンフェッティ
+        createCorrectConfetti();
+    }
+
+    function playIncorrectEffect() {
+        // フラッシュ
+        const flash = document.createElement('div');
+        flash.className = 'incorrect-overlay';
+        flash.style.position = 'fixed';
+        flash.style.top = '0';
+        flash.style.left = '0';
+        flash.style.width = '100%';
+        flash.style.height = '100%';
+        flash.style.zIndex = '9999';
+        flash.style.pointerEvents = 'none';
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 600);
+
+        // テキスト演出
+        const text = document.createElement('div');
+        text.className = 'result-text incorrect';
+        text.textContent = '😭 不正解...';
+        document.body.appendChild(text);
+        setTimeout(() => text.remove(), 1500);
+
+        // 不正解音
+        playIncorrectSound();
+    }
+
+    // 正解音（ファンファーレ）
+    function playCorrectSound() {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioContext.currentTime;
+        const notes = [
+            { freq: 523.25, start: 0, duration: 0.2 },
+            { freq: 659.25, start: 0.2, duration: 0.2 },
+            { freq: 783.99, start: 0.4, duration: 0.2 },
+            { freq: 1046.5, start: 0.6, duration: 0.4 }
+        ];
+
+        notes.forEach(note => {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.value = note.freq;
+            gain.gain.setValueAtTime(0.3, now + note.start);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + note.start + note.duration);
+            osc.start(now + note.start);
+            osc.stop(now + note.start + note.duration);
+        });
+    }
+
+    // 不正解音（低い音）
+    function playIncorrectSound() {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioContext.currentTime;
+        const notes = [
+            { freq: 220, start: 0, duration: 0.3 },
+            { freq: 165, start: 0.3, duration: 0.4 }
+        ];
+
+        notes.forEach(note => {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.value = note.freq;
+            gain.gain.setValueAtTime(0.2, now + note.start);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + note.start + note.duration);
+            osc.start(now + note.start);
+            osc.stop(now + note.start + note.duration);
+        });
+    }
+
+    // コンフェッティ（正解時）
+    function createCorrectConfetti() {
+        const confettiCount = 50;
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.zIndex = '9999';
+        overlay.style.pointerEvents = 'none';
+        document.body.appendChild(overlay);
+
+        for (let i = 0; i < confettiCount; i++) {
+            const confetti = document.createElement('div');
+            confetti.style.position = 'fixed';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.top = '-10px';
+            confetti.style.width = '10px';
+            confetti.style.height = '10px';
+            confetti.style.backgroundColor = ['#22c55e', '#10b981', '#059669', '#047857'][Math.floor(Math.random() * 4)];
+            confetti.style.borderRadius = '50%';
+            confetti.style.zIndex = '9999';
+            confetti.style.pointerEvents = 'none';
+
+            overlay.appendChild(confetti);
+
+            const duration = 2 + Math.random() * 1;
+            const delay = Math.random() * 0.5;
+            confetti.animate([
+                { transform: 'translateY(0) rotate(0deg)', opacity: 1 },
+                { transform: `translateY(${window.innerHeight}px) rotate(720deg)`, opacity: 0 }
+            ], {
+                duration: duration * 1000,
+                delay: delay * 1000,
+                easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+            });
+        }
+
+        setTimeout(() => overlay.remove(), 3000);
+    }
+
+    // ページロード時に結果演出を実行
+    window.addEventListener('load', function() {
+        const resultStatus = document.getElementById('result-status');
+        if (resultStatus) {
+            setTimeout(() => {
+                if (resultStatus.value === 'correct') {
+                    playCorrectEffect();
+                } else if (resultStatus.value === 'incorrect') {
+                    playIncorrectEffect();
+                }
+            }, 500);
+        }
+    });
 
     // 新問題解放演出
     socket.on('quiz_update', (data) => {

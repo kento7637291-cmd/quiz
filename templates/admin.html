@@ -245,10 +245,10 @@
                         </div>
                         <div class="card-body p-3 bg-dark-50 border-bottom border-secondary">
                             <p class="text-muted small mb-2">ベット締切カウントダウン:</p>
-                            <div class="d-flex gap-2">
+                            <div class="d-flex flex-wrap gap-2">
                                 {% for seconds in [30, 60, 120] %}
-                                <form action="{{ url_for('quiz.admin_start_countdown', event_id=events[0].event_id if events else 0, seconds=seconds) }}" method="POST" class="flex-grow-1">
-                                    <button type="submit" class="btn btn-sm btn-outline-warning w-100 fw-bold" {% if events|length == 0 %}disabled{% endif %}>
+                                <form action="{{ url_for('quiz.admin_start_countdown', event_id=events[0].event_id if events else 0, seconds=seconds) }}" method="POST" class="flex-grow-1 countdown-form" style="min-width: 120px;">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning w-100 fw-bold countdown-btn" data-seconds="{{ seconds }}" {% if events|length == 0 %}disabled{% endif %}>
                                         ⏰ {{ seconds }}秒
                                     </button>
                                 </form>
@@ -511,6 +511,33 @@
             const tab = new bootstrap.Tab(tabButton);
             tab.show();
         }
+    });
+
+    // カウントダウンボタンの重複押下防止
+    let countdownInProgress = false;
+    const countdownButtons = document.querySelectorAll('.countdown-btn');
+
+    countdownButtons.forEach(btn => {
+        const form = btn.closest('.countdown-form');
+
+        form.addEventListener('submit', function(e) {
+            if (countdownInProgress) {
+                e.preventDefault();
+                alert('カウントダウンはすでに実行中です。終了するまでお待ちください。');
+                return false;
+            }
+
+            // すべてのカウントダウンボタンを disabled
+            countdownInProgress = true;
+            countdownButtons.forEach(b => b.disabled = true);
+
+            // 指定秒数後にボタンを有効化
+            const seconds = parseInt(btn.getAttribute('data-seconds'));
+            setTimeout(() => {
+                countdownInProgress = false;
+                countdownButtons.forEach(b => b.disabled = false);
+            }, seconds * 1000 + 1000);  // 秒数 + 1秒の余裕
+        });
     });
 </script>
 {% endblock %}
