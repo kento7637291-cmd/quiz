@@ -498,17 +498,21 @@
             document.body.appendChild(overlay);
             console.log('Overlay created');
 
-            // 0.8秒後にフェードアウト、その後リロード
+            // 1.2秒後にフェードアウト、その後トースト表示、その後リロード
             setTimeout(() => {
                 console.log('Fading out overlay...');
                 overlay.classList.add('fade-out');
                 setTimeout(() => {
-                    console.log('Removing overlay and reloading...');
+                    console.log('Removing overlay...');
                     overlay.remove();
                     showUpdateToast();
-                    setTimeout(() => location.reload(), 800);
+                    console.log('Reloading after 1.2 seconds...');
+                    setTimeout(() => {
+                        console.log('Page reloading now');
+                        location.reload();
+                    }, 1200);
                 }, 400);
-            }, 800);
+            }, 1200);
         } else {
             console.log('Status is not settled, regular reload');
             showUpdateToast();
