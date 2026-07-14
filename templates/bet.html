@@ -485,8 +485,10 @@
     socket.on('event_update', (data) => {
         console.log('event_update received:', data);
         console.log('status:', data.status);
+        alert('event_update イベント受信: status=' + data.status);
 
         if (data.status === 'settled') {
+            alert('演出を表示開始します...');
             console.log('Status is settled, showing result reveal animation...');
             // オーバーレイを作成
             const overlay = document.createElement('div');
@@ -497,6 +499,7 @@
             overlay.appendChild(text);
             document.body.appendChild(overlay);
             console.log('Overlay created');
+            alert('オーバーレイが作成されました');
 
             // 1.2秒後にフェードアウト、その後トースト表示、その後リロード
             setTimeout(() => {
