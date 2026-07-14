@@ -147,72 +147,36 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
-        // 各ウィンドウで異なるセッション情報を保持
-        // 複数ウィンドウでのセッション混在を防止
+        // グローバルな window_id を定義
+        let windowId = sessionStorage.getItem('windowId');
+        if (!windowId) {
+            windowId = 'win_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('windowId', windowId);
+        }
+
+        // ページロード時にクエリパラメータから user_type を読み込んでサーバーと一致するか検証
         (function() {
-            // このウィンドウ特有のID を生成
-            let windowId = sessionStorage.getItem('windowId');
-            if (!windowId) {
-                windowId = 'win_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                sessionStorage.setItem('windowId', windowId);
+            const urlParams = new URLSearchParams(window.location.search);
+            const paramUserType = urlParams.get('user_type');
+            const currentUserType = {{ 'admin' if session.get('is_admin') else ('team' if session.get('team_id') else '')|tojson }};
+
+            // クエリパラメータがあり、かつサーバーのセッション user_type と異なる場合
+            if (paramUserType && paramUserType !== currentUserType) {
+                console.warn('User type mismatch:', { paramUserType, currentUserType });
+                window.location.href = '/login';
             }
-
-            // 現在のウィンドウのセッション情報を保存
-            const currentRole = {
-                isAdmin: {{ 'true' if session.get('is_admin') else 'false' }},
-                teamId: {{ session.get('team_id') or 'null' }},
-                teamName: {{ session.get('team_name')|tojson }},
-                windowId: windowId
-            };
-            sessionStorage.setItem('windowRole', JSON.stringify(currentRole));
-
-            // ページリロード時にセッション情報を検証
-            function validateSession() {
-                const stored = JSON.parse(sessionStorage.getItem('windowRole') || '{}');
-                const current = {
-                    isAdmin: {{ 'true' if session.get('is_admin') else 'false' }},
-                    teamId: {{ session.get('team_id') or 'null' }}
-                };
-
-                // セッション情報が変わった場合（別のウィンドウでログインされた）
-                if (stored.isAdmin !== current.isAdmin || stored.teamId !== current.teamId) {
-                    alert('複数ウィンドウでのセッション混在が検出されました。ログイン画面に戻ります。');
-                    window.location.href = '/login';
-                    return false;
-                }
-                return true;
-            }
-
-            // ページ読み込み後にサーバーのセッション情報と一致するか検証
-            window.addEventListener('load', function() {
-                fetch('/api/verify-session')
-                    .then(resp => resp.json())
-                    .then(data => {
-                        const stored = JSON.parse(sessionStorage.getItem('windowRole') || '{}');
-
-                        // サーバーのセッション情報とクライアント側で保持している情報を比較
-                        if (data.is_admin !== stored.isAdmin ||
-                            data.team_id !== stored.teamId) {
-                            // セッション不一致 → ログイン画面へリダイレクト
-                            console.warn('Session mismatch detected. Redirecting to login.');
-                            sessionStorage.clear();
-                            window.location.href = '/login';
-                        }
-                    })
-                    .catch(err => console.error('Session verification failed:', err));
-            });
-
-            // すべてのフォームにwindow_idを自動追加
-            document.addEventListener('submit', function(e) {
-                if (e.target && e.target.tagName === 'FORM') {
-                    let input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'window_id';
-                    input.value = windowId;
-                    e.target.appendChild(input);
-                }
-            }, true);
         })();
+
+        // すべてのリロード時に user_type クエリパラメータを付加
+        function safeReload() {
+            const url = new URL(window.location.href);
+            const userType = {{ 'admin' if session.get('is_admin') else ('team' if session.get('team_id') else '')|tojson }};
+            if (userType) {
+                url.searchParams.set('user_type', userType);
+            }
+            url.searchParams.set('window_id', windowId);
+            window.location.href = url.toString();
+        }
 
         const socket = io();
 
@@ -228,33 +192,6 @@
             document.getElementById('broadcastMessage').textContent = data.message || '';
             modal.show();
         });
-
-        // ページリロード前に必ずサーバー側のセッション情報を確認
-        function safeReload() {
-            // サーバーのセッション情報を確認
-            fetch('/api/verify-session')
-                .then(resp => resp.json())
-                .then(data => {
-                    const stored = JSON.parse(sessionStorage.getItem('windowRole') || '{}');
-
-                    // サーバー側のセッション情報とクライアント側の情報を比較
-                    if (data.is_admin !== stored.isAdmin ||
-                        data.team_id !== stored.teamId) {
-                        // セッション不一致 → セッションクリアしてログイン画面へ
-                        console.warn('Session mismatch on reload. Redirecting to login.');
-                        sessionStorage.clear();
-                        window.location.href = '/login';
-                    } else {
-                        // セッション一致 → ページリロード
-                        location.reload();
-                    }
-                })
-                .catch(err => {
-                    // API 呼び出し失敗時は通常リロード
-                    console.error('Session verification failed:', err);
-                    location.reload();
-                });
-        }
 
         socket.on('reset_all', () => {
             showUpdateToast();

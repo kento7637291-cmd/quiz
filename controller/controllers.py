@@ -20,13 +20,14 @@ def verify_window_id():
     # POST フォーム または GET パラメータから window_id を取得
     request_window_id = request.form.get("window_id") or request.args.get("window_id")
 
-    # window_id が送られていない場合は検証スキップ（GET ページリクエストなど）
+    # window_id がない場合は検証スキップ
     if not request_window_id:
         return True
 
     if request_window_id != stored_window_id:
-        # 異なるウィンドウからのアクセス→セッションをクリア
+        # 異なるウィンドウからのアクセス→セッションをクリア＆ログイン画面へ
         session.clear()
+        flash("別のウィンドウからログインされています。再度ログインしてください。", "warning")
         return False
     return True
 
@@ -137,14 +138,11 @@ def login():
             session.permanent = True
             session["is_admin"] = True
             session["name"] = "管理者"
-            session["window_id"] = str(uuid.uuid4())
+            session["user_type"] = "admin"  # ウィンドウの役割を保存
             session.modified = True
 
             flash("管理者としてログインしました。", "success")
-            resp = make_response(redirect(url_for("quiz.admin")))
-            # セッションクッキーを削除して、新しいセッションID を取得させる
-            resp.delete_cookie('session', path='/')
-            return resp
+            return redirect(url_for("quiz.admin"))
         else:
             team_id = request.form.get("team_id", type=int)
             team_name_suffix = request.form.get("team_name_suffix", "").strip()
@@ -171,14 +169,11 @@ def login():
                 session.permanent = True
                 session["team_id"] = team.team_id
                 session["team_name"] = team.team_name
-                session["window_id"] = str(uuid.uuid4())
+                session["user_type"] = "team"  # ウィンドウの役割を保存
                 session.modified = True
 
                 flash(f"{team.team_name}として参加しました！", "success")
-                resp = make_response(redirect(url_for("quiz.bingo")))
-                # セッションクッキーを削除して、新しいセッションID を取得させる
-                resp.delete_cookie('session', path='/')
-                return resp
+                return redirect(url_for("quiz.bingo"))
 
     teams = repositories.get_all_teams()
     return render_template("login.html", teams=teams)
