@@ -221,10 +221,6 @@
             setTimeout(() => safeReload(), 800);
         });
 
-        socket.on('event_update', (data) => {
-            showUpdateToast();
-            setTimeout(() => safeReload(), 800);
-        });
     </script>
     {% block extra_js %}{% endblock %}
 </body>
