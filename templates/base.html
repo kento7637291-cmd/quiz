@@ -147,26 +147,56 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
-        // ウィンドウごとに異なるIDを生成・保存（複数ウィンドウでのセッション混在防止）
-        function getWindowId() {
+        // 各ウィンドウで異なるセッション情報を保持
+        // 複数ウィンドウでのセッション混在を防止
+        (function() {
+            // このウィンドウ特有のID を生成
             let windowId = sessionStorage.getItem('windowId');
             if (!windowId) {
-                windowId = 'win_' + Math.random().toString(36).substr(2, 9);
+                windowId = 'win_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 sessionStorage.setItem('windowId', windowId);
             }
-            return windowId;
-        }
 
-        // すべてのフォームにwindow_idを自動追加
-        document.addEventListener('submit', function(e) {
-            if (e.target && e.target.tagName === 'FORM') {
-                let input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'window_id';
-                input.value = getWindowId();
-                e.target.appendChild(input);
+            // 現在のウィンドウのセッション情報を保存
+            const currentRole = {
+                isAdmin: {{ 'true' if session.get('is_admin') else 'false' }},
+                teamId: {{ session.get('team_id') or 'null' }},
+                teamName: {{ session.get('team_name')|tojson }},
+                windowId: windowId
+            };
+            sessionStorage.setItem('windowRole', JSON.stringify(currentRole));
+
+            // ページリロード時にセッション情報を検証
+            function validateSession() {
+                const stored = JSON.parse(sessionStorage.getItem('windowRole') || '{}');
+                const current = {
+                    isAdmin: {{ 'true' if session.get('is_admin') else 'false' }},
+                    teamId: {{ session.get('team_id') or 'null' }}
+                };
+
+                // セッション情報が変わった場合（別のウィンドウでログインされた）
+                if (stored.isAdmin !== current.isAdmin || stored.teamId !== current.teamId) {
+                    alert('複数ウィンドウでのセッション混在が検出されました。ログイン画面に戻ります。');
+                    window.location.href = '/login';
+                    return false;
+                }
+                return true;
             }
-        }, true);
+
+            // ページ読み込み後に検証
+            window.addEventListener('load', validateSession);
+
+            // すべてのフォームにwindow_idを自動追加
+            document.addEventListener('submit', function(e) {
+                if (e.target && e.target.tagName === 'FORM') {
+                    let input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'window_id';
+                    input.value = windowId;
+                    e.target.appendChild(input);
+                }
+            }, true);
+        })();
 
         const socket = io();
 
@@ -183,37 +213,54 @@
             modal.show();
         });
 
+        // ページリロード前に現在のウィンドウのセッション検証を行う
+        function safeReload() {
+            const stored = JSON.parse(sessionStorage.getItem('windowRole') || '{}');
+            // クライアント側で保持している現在のロール情報
+            const isCurrentAdmin = {{ 'true' if session.get('is_admin') else 'false' }};
+            const isCurrentTeam = {{ session.get('team_id') is not none }};
+
+            // ページが読み込まれた時点でのロール情報と現在のセッション保存情報を比較
+            if (stored.isAdmin !== isCurrentAdmin || stored.teamId !== (isCurrentTeam ? {{ session.get('team_id') }} : null)) {
+                // 別のウィンドウでセッションが切り替わった可能性
+                // 強制リロードして最新のセッション状態を取得
+                window.location.reload(true);  // キャッシュをバイパスしてリロード
+            } else {
+                location.reload();
+            }
+        }
+
         socket.on('reset_all', () => {
             showUpdateToast();
-            setTimeout(() => location.reload(), 800);
+            setTimeout(() => safeReload(), 800);
         });
 
         socket.on('points_update', (data) => {
             showUpdateToast();
             setTimeout(() => {
                 if (window.location.pathname.includes('/ranking')) {
-                    location.reload();
+                    safeReload();
                 }
                 const headerPoints = document.getElementById('headerPoints');
                 if (headerPoints) {
-                    location.reload();
+                    safeReload();
                 }
             }, 800);
         });
 
         socket.on('quiz_update', (data) => {
             showUpdateToast();
-            setTimeout(() => location.reload(), 800);
+            setTimeout(() => safeReload(), 800);
         });
 
         socket.on('bingo_update', (data) => {
             showUpdateToast();
-            setTimeout(() => location.reload(), 800);
+            setTimeout(() => safeReload(), 800);
         });
 
         socket.on('event_update', (data) => {
             showUpdateToast();
-            setTimeout(() => location.reload(), 800);
+            setTimeout(() => safeReload(), 800);
         });
     </script>
     {% block extra_js %}{% endblock %}

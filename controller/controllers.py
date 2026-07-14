@@ -17,8 +17,14 @@ def verify_window_id():
     if not stored_window_id:
         return True  # ログイン前は検査しない
 
+    # POST フォーム または GET パラメータから window_id を取得
     request_window_id = request.form.get("window_id") or request.args.get("window_id")
-    if request_window_id and request_window_id != stored_window_id:
+
+    # window_id が送られていない場合は検証スキップ（GET ページリクエストなど）
+    if not request_window_id:
+        return True
+
+    if request_window_id != stored_window_id:
         # 異なるウィンドウからのアクセス→セッションをクリア
         session.clear()
         return False
@@ -97,15 +103,28 @@ def login():
                 flash("管理者パスワードが正しくありません。", "danger")
                 return redirect(url_for("quiz.login"))
 
+            # 古いセッションファイルを削除（新しいセッションIDを強制生成）
+            import os
+            old_session_id = request.cookies.get('session')
+            if old_session_id:
+                try:
+                    session_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'sessions', old_session_id)
+                    if os.path.exists(session_file):
+                        os.remove(session_file)
+                except:
+                    pass
+
             session.clear()
             session.permanent = True
             session["is_admin"] = True
             session["name"] = "管理者"
             session["window_id"] = str(uuid.uuid4())
             session.modified = True
+
             flash("管理者としてログインしました。", "success")
             resp = make_response(redirect(url_for("quiz.admin")))
-            resp.set_cookie("session", "", max_age=0)  # 古いセッションクッキーをクリア
+            # セッションクッキーを削除して、新しいセッションID を取得させる
+            resp.delete_cookie('session', path='/')
             return resp
         else:
             team_id = request.form.get("team_id", type=int)
@@ -118,15 +137,28 @@ def login():
                     team.team_name = team_name_suffix
                     db.session.commit()
 
+                # 古いセッションファイルを削除（新しいセッションIDを強制生成）
+                import os
+                old_session_id = request.cookies.get('session')
+                if old_session_id:
+                    try:
+                        session_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'sessions', old_session_id)
+                        if os.path.exists(session_file):
+                            os.remove(session_file)
+                    except:
+                        pass
+
                 session.clear()
                 session.permanent = True
                 session["team_id"] = team.team_id
                 session["team_name"] = team.team_name
                 session["window_id"] = str(uuid.uuid4())
                 session.modified = True
+
                 flash(f"{team.team_name}として参加しました！", "success")
                 resp = make_response(redirect(url_for("quiz.bingo")))
-                resp.set_cookie("session", "", max_age=0)  # 古いセッションクッキーをクリア
+                # セッションクッキーを削除して、新しいセッションID を取得させる
+                resp.delete_cookie('session', path='/')
                 return resp
 
     teams = repositories.get_all_teams()
