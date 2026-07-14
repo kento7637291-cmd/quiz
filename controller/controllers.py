@@ -80,6 +80,12 @@ def inject_game_status():
 # Route: Index Redirect
 @quiz_bp.route("/", methods=["GET"])
 def index():
+    # リロード時にセッション検証
+    if not verify_window_id():
+        session.clear()
+        flash("セッションの検証に失敗しました。再度ログインしてください。", "warning")
+        return redirect(url_for("quiz.login"))
+
     if session.get("is_admin"):
         return redirect(url_for("quiz.admin"))
     if "team_id" in session:
@@ -90,6 +96,19 @@ def index():
 @quiz_bp.route("/health")
 def health():
     return {"status": "ok"}, 200
+
+
+# Route: セッション検証 API
+@quiz_bp.route("/api/verify-session", methods=["GET"])
+def verify_session_api():
+    """現在のセッション情報をクライアントに返す（セッション検証用）"""
+    return {
+        "is_admin": session.get("is_admin", False),
+        "team_id": session.get("team_id"),
+        "team_name": session.get("team_name"),
+        "window_id": session.get("window_id"),
+        "has_session": bool(session.get("is_admin") or session.get("team_id"))
+    }
 
 
 # Route: Login / Team Selection

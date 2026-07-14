@@ -183,8 +183,24 @@
                 return true;
             }
 
-            // ページ読み込み後に検証
-            window.addEventListener('load', validateSession);
+            // ページ読み込み後にサーバーのセッション情報と一致するか検証
+            window.addEventListener('load', function() {
+                fetch('/api/verify-session')
+                    .then(resp => resp.json())
+                    .then(data => {
+                        const stored = JSON.parse(sessionStorage.getItem('windowRole') || '{}');
+
+                        // サーバーのセッション情報とクライアント側で保持している情報を比較
+                        if (data.is_admin !== stored.isAdmin ||
+                            data.team_id !== stored.teamId) {
+                            // セッション不一致 → ログイン画面へリダイレクト
+                            console.warn('Session mismatch detected. Redirecting to login.');
+                            sessionStorage.clear();
+                            window.location.href = '/login';
+                        }
+                    })
+                    .catch(err => console.error('Session verification failed:', err));
+            });
 
             // すべてのフォームにwindow_idを自動追加
             document.addEventListener('submit', function(e) {
@@ -213,21 +229,31 @@
             modal.show();
         });
 
-        // ページリロード前に現在のウィンドウのセッション検証を行う
+        // ページリロード前に必ずサーバー側のセッション情報を確認
         function safeReload() {
-            const stored = JSON.parse(sessionStorage.getItem('windowRole') || '{}');
-            // クライアント側で保持している現在のロール情報
-            const isCurrentAdmin = {{ 'true' if session.get('is_admin') else 'false' }};
-            const isCurrentTeam = {{ session.get('team_id') is not none }};
+            // サーバーのセッション情報を確認
+            fetch('/api/verify-session')
+                .then(resp => resp.json())
+                .then(data => {
+                    const stored = JSON.parse(sessionStorage.getItem('windowRole') || '{}');
 
-            // ページが読み込まれた時点でのロール情報と現在のセッション保存情報を比較
-            if (stored.isAdmin !== isCurrentAdmin || stored.teamId !== (isCurrentTeam ? {{ session.get('team_id') }} : null)) {
-                // 別のウィンドウでセッションが切り替わった可能性
-                // 強制リロードして最新のセッション状態を取得
-                window.location.reload(true);  // キャッシュをバイパスしてリロード
-            } else {
-                location.reload();
-            }
+                    // サーバー側のセッション情報とクライアント側の情報を比較
+                    if (data.is_admin !== stored.isAdmin ||
+                        data.team_id !== stored.teamId) {
+                        // セッション不一致 → セッションクリアしてログイン画面へ
+                        console.warn('Session mismatch on reload. Redirecting to login.');
+                        sessionStorage.clear();
+                        window.location.href = '/login';
+                    } else {
+                        // セッション一致 → ページリロード
+                        location.reload();
+                    }
+                })
+                .catch(err => {
+                    // API 呼び出し失敗時は通常リロード
+                    console.error('Session verification failed:', err);
+                    location.reload();
+                });
         }
 
         socket.on('reset_all', () => {
