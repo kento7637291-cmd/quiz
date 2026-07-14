@@ -264,16 +264,41 @@
         }
     });
 
+    // フォーム入力中かどうかを判定
+    function isFormBeingEdited() {
+        const contentInput = document.getElementById('contentInput');
+        const name1Input = document.getElementById('name1Input');
+        const name2Input = document.getElementById('name2Input');
+
+        if (!contentInput || !name1Input || !name2Input) return false;
+
+        // いずれかのフィールドに入力がある場合は編集中と判定
+        return contentInput.value.trim() !== '' ||
+               name1Input.value.trim() !== '' ||
+               name2Input.value.trim() !== '';
+    }
+
     socket.on('bingo_update', (data) => {
+        // フォーム入力中なら自動リロードしない
+        if (isFormBeingEdited()) {
+            console.warn('Form is being edited. Skipping auto-reload for bingo_update.');
+            return;
+        }
         location.reload();
     });
 
     socket.on('bingo_start', (data) => {
-        location.reload();
+        // フォーム入力中でも、ゲーム開始は表示する（ページリロード）
+        if (!isFormBeingEdited()) {
+            location.reload();
+        }
     });
 
     socket.on('bingo_stop', (data) => {
-        location.reload();
+        // フォーム入力中でも、ゲーム停止は表示する（ページリロード）
+        if (!isFormBeingEdited()) {
+            location.reload();
+        }
     });
 
     // ビンゴ達成エフェクト

@@ -14,6 +14,11 @@
         50% { box-shadow: 0 0 30px 20px rgba(251, 191, 36, 0); }
     }
 
+    @keyframes red-glow {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+        50% { box-shadow: 0 0 30px 20px rgba(220, 53, 69, 0); }
+    }
+
     @keyframes sparkle-burst {
         0% { opacity: 1; transform: scale(1); }
         100% { opacity: 0; transform: scale(0); }
@@ -68,6 +73,11 @@
 
     .jackpot-text.lose {
         color: #dc3545;
+        text-shadow: 0 0 30px rgba(220, 53, 69, 0.8);
+    }
+
+    .lose-card-glow {
+        animation: red-glow 1s ease-out;
     }
 
     .points-counter {
@@ -320,42 +330,98 @@
         setTimeout(() => overlay.remove(), 3000);
     }
 
+    // 不正解音（LOSE時）
+    function playLoseSound() {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioContext.currentTime;
+        const notes = [
+            { freq: 220, start: 0, duration: 0.3 },
+            { freq: 165, start: 0.3, duration: 0.4 }
+        ];
+
+        notes.forEach(note => {
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.value = note.freq;
+            gain.gain.setValueAtTime(0.2, now + note.start);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + note.start + note.duration);
+            osc.start(now + note.start);
+            osc.stop(now + note.start + note.duration);
+        });
+    }
+
     // ジャックポット演出を実行する関数
     function playJackpotEffect(isWin, payout) {
-        // フラッシュ
-        const flash = document.createElement('div');
-        flash.className = 'jackpot-overlay jackpot-flash';
-        document.body.appendChild(flash);
-        setTimeout(() => flash.remove(), 500);
-
-        // テキスト演出
-        const text = document.createElement('div');
-        text.className = `jackpot-text ${isWin ? 'win' : 'lose'}`;
-        text.textContent = isWin ? '大当たり！' : 'ハズレ...';
-        document.body.appendChild(text);
-        setTimeout(() => text.remove(), 1500);
-
-        // ポイント表示
-        if (isWin && payout > 0) {
-            const pointsDisplay = document.createElement('div');
-            pointsDisplay.className = 'points-counter';
-            pointsDisplay.textContent = `+${payout}pt`;
-            document.body.appendChild(pointsDisplay);
-            setTimeout(() => pointsDisplay.remove(), 1500);
-        }
-
-        // ゴールドグロー
-        const betCard = document.querySelector('.alert-success');
-        if (betCard) {
-            betCard.classList.add('bet-card-glow');
-        }
-
-        // ファンファーレ音
-        playFanfare();
-
-        // コンフェッティ
         if (isWin) {
+            // WIN時の演出
+            // フラッシュ
+            const flash = document.createElement('div');
+            flash.className = 'jackpot-overlay jackpot-flash';
+            document.body.appendChild(flash);
+            setTimeout(() => flash.remove(), 500);
+
+            // テキスト演出
+            const text = document.createElement('div');
+            text.className = `jackpot-text ${isWin ? 'win' : 'lose'}`;
+            text.textContent = '大当たり！';
+            document.body.appendChild(text);
+            setTimeout(() => text.remove(), 1500);
+
+            // ポイント表示
+            if (payout > 0) {
+                const pointsDisplay = document.createElement('div');
+                pointsDisplay.className = 'points-counter';
+                pointsDisplay.textContent = `+${payout}pt`;
+                document.body.appendChild(pointsDisplay);
+                setTimeout(() => pointsDisplay.remove(), 1500);
+            }
+
+            // ゴールドグロー
+            const betCard = document.getElementById('bet-result-card');
+            if (betCard) {
+                betCard.classList.add('bet-card-glow');
+            }
+
+            // ファンファーレ音
+            playFanfare();
+
+            // コンフェッティ
             createConfetti();
+        } else {
+            // LOSE時の演出
+            // 赤フラッシュ
+            const flash = document.createElement('div');
+            flash.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(220, 53, 69, 0.3);
+                z-index: 9999;
+                pointer-events: none;
+                animation: jackpot-flash 0.5s ease-out;
+            `;
+            document.body.appendChild(flash);
+            setTimeout(() => flash.remove(), 500);
+
+            // テキスト演出
+            const text = document.createElement('div');
+            text.className = 'jackpot-text lose';
+            text.textContent = 'ハズレ...';
+            document.body.appendChild(text);
+            setTimeout(() => text.remove(), 1500);
+
+            // 赤グロー
+            const betCard = document.getElementById('bet-result-card');
+            if (betCard) {
+                betCard.classList.add('lose-card-glow');
+            }
+
+            // 不正解音
+            playLoseSound();
         }
     }
 
