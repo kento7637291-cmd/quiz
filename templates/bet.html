@@ -483,7 +483,11 @@
 
     // 管理者画面側でのベット結果発表をキャッチして演出後リロード
     socket.on('event_update', (data) => {
+        console.log('event_update received:', data);
+        console.log('status:', data.status);
+
         if (data.status === 'settled') {
+            console.log('Status is settled, showing result reveal animation...');
             // オーバーレイを作成
             const overlay = document.createElement('div');
             overlay.className = 'result-reveal-overlay';
@@ -492,17 +496,21 @@
             text.textContent = '📢 結果発表！';
             overlay.appendChild(text);
             document.body.appendChild(overlay);
+            console.log('Overlay created');
 
             // 0.8秒後にフェードアウト、その後リロード
             setTimeout(() => {
+                console.log('Fading out overlay...');
                 overlay.classList.add('fade-out');
                 setTimeout(() => {
+                    console.log('Removing overlay and reloading...');
                     overlay.remove();
                     showUpdateToast();
                     setTimeout(() => location.reload(), 800);
                 }, 400);
             }, 800);
         } else {
+            console.log('Status is not settled, regular reload');
             showUpdateToast();
             setTimeout(() => location.reload(), 800);
         }
