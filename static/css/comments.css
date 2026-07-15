@@ -1,0 +1,64 @@
+/* Comments Component CSS (独立 - 削除可能) */
+
+#commentsList {
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+.comment-item {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(108, 117, 125, 0.3);
+    animation: slideInComment 0.3s ease-out;
+}
+
+.comment-item:last-child {
+    border-bottom: none;
+}
+
+.comment-item:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.comment-item.new-comment {
+    background-color: rgba(13, 202, 240, 0.1);
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.comment-team-name {
+    font-weight: bold;
+    color: #0dcaf0;
+    font-size: 0.95rem;
+}
+
+.comment-time {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.comment-text {
+    color: #fff;
+    word-break: break-word;
+    line-height: 1.5;
+    font-size: 0.95rem;
+}
+
+#commentInput::placeholder {
+    color: #6c757d;
+}
+
+@keyframes slideInComment {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}

@@ -837,3 +837,55 @@ def admin_start_countdown(event_id: int, seconds: int):
     repositories.add_operation_log("ベットカウントダウン開始", f"{event.event_name}: {seconds}秒")
     flash(f"{event.event_name} のカウントダウンを開始しました。", "success")
     return redirect(url_for("quiz.admin"))
+
+
+# Comment API: Post a comment
+@quiz_bp.route("/api/comment", methods=["POST"])
+def post_comment():
+    if not session.get("team_id"):
+        return {"error": "Unauthorized"}, 401
+
+    team_id = session.get("team_id")
+    team_name = session.get("team_name")
+    comment_text = request.form.get("comment_text", "").strip()
+
+    if not comment_text:
+        return {"error": "Comment text is empty"}, 400
+
+    if len(comment_text) > 500:
+        return {"error": "Comment too long (max 500 chars)"}, 400
+
+    comment = repositories.add_comment(team_id, team_name, comment_text)
+
+    # Broadcast to all clients
+    socketio.emit(
+        "new_comment",
+        {
+            "comment_id": comment.comment_id,
+            "team_name": comment.team_name,
+            "comment_text": comment.comment_text,
+            "created_at": comment.created_at.strftime("%H:%M:%S"),
+        },
+        namespace="/",
+    )
+
+    return {"success": True, "comment_id": comment.comment_id}, 200
+
+
+# Comment API: Get recent comments
+@quiz_bp.route("/api/comments")
+def get_comments():
+    limit = request.args.get("limit", 50, type=int)
+    comments = repositories.get_recent_comments(limit)
+
+    return {
+        "comments": [
+            {
+                "comment_id": c.comment_id,
+                "team_name": c.team_name,
+                "comment_text": c.comment_text,
+                "created_at": c.created_at.strftime("%H:%M:%S"),
+            }
+            for c in reversed(comments)
+        ]
+    }, 200

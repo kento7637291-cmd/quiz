@@ -10,6 +10,7 @@ from model.models import (
     TeamBet,
     BetOption,
     OperationLog,
+    Comment,
 )
 
 # Team Repositories
@@ -166,3 +167,13 @@ def add_operation_log(action: str, details: str = None) -> OperationLog:
 
 def get_recent_operation_logs(limit: int = 20) -> list[OperationLog]:
     return OperationLog.query.order_by(OperationLog.timestamp.desc()).limit(limit).all()
+
+# Comment Repositories
+def add_comment(team_id: int, team_name: str, comment_text: str) -> Comment:
+    comment = Comment(team_id=team_id, team_name=team_name, comment_text=comment_text)
+    db.session.add(comment)
+    db.session.commit()
+    return comment
+
+def get_recent_comments(limit: int = 50) -> list[Comment]:
+    return Comment.query.order_by(Comment.created_at.desc()).limit(limit).all()

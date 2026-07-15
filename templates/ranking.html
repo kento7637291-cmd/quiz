@@ -3,6 +3,8 @@
 {% block title %}リアルタイムランキング - 新卒交流会{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/comments.css') }}">
+
 <style>
     .podium-container {
         display: flex;
@@ -32,7 +34,7 @@
     .podium-rank-1 { height: 160px; background: linear-gradient(180deg, rgba(251, 191, 36, 0.3) 0%, rgba(251, 191, 36, 0.1) 100%); border: 2px solid #fbbf24; border-bottom: none; }
     .podium-rank-2 { height: 120px; background: linear-gradient(180deg, rgba(229, 231, 235, 0.2) 0%, rgba(229, 231, 235, 0.05) 100%); border: 2px solid #e5e7eb; border-bottom: none; }
     .podium-rank-3 { height: 90px; background: linear-gradient(180deg, rgba(217, 119, 6, 0.2) 0%, rgba(217, 119, 6, 0.05) 100%); border: 2px solid #d97706; border-bottom: none; }
-    
+
     .team-avatar {
         width: 60px;
         height: 60px;
@@ -47,7 +49,7 @@
         box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     }
     .podium-rank-1 .team-avatar { border-color: #fbbf24; box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
-    
+
     .crown {
         position: absolute;
         top: -25px;
@@ -177,10 +179,16 @@
             </a>
         </div>
     </div>
+
+    <!-- コメント欄 (独立コンポーネント - 削除可能) -->
+    <div class="col-lg-10 mt-5">
+        {% include 'components/comments.html' %}
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/comments.js') }}"></script>
 <script>
     // ランキング更新フラッシュアニメーション
     socket.on('points_update', (data) => {

@@ -151,3 +151,17 @@ class OperationLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     action = db.Column(db.String(200), nullable=False)
     details = db.Column(db.String(500), nullable=True)
+
+
+class Comment(db.Model):
+    __tablename__ = "comments"
+
+    comment_id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(
+        db.Integer, db.ForeignKey("teams.team_id", ondelete="CASCADE"), nullable=False
+    )
+    team_name = db.Column(db.String(50), nullable=False)
+    comment_text = db.Column(db.String(500), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    team = db.relationship("Team", backref="comments")
