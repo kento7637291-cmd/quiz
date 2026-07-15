@@ -3,8 +3,6 @@
 {% block title %}リアルタイムランキング - 新卒交流会{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/comments.css') }}">
-
 <style>
     .podium-container {
         display: flex;
@@ -179,16 +177,10 @@
             </a>
         </div>
     </div>
-
-    <!-- コメント欄 (独立コンポーネント - 削除可能) -->
-    <div class="col-lg-10 mt-5">
-        {% include 'components/comments.html' %}
-    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/comments.js') }}"></script>
 <script>
     // ランキング更新フラッシュアニメーション
     socket.on('points_update', (data) => {
