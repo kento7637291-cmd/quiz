@@ -537,10 +537,10 @@ def admin_settle_event(event_id: int):
             bets = repositories.get_bets_for_event(event_id)
 
             correct_map = {
-                "赤色": request.form.get("flavor_red", "巨峰").strip(),
+                "赤色": request.form.get("flavor_red", "マンゴー").strip(),
                 "青色": request.form.get("flavor_blue", "イチゴ").strip(),
-                "緑色": request.form.get("flavor_green", "イチゴ").strip(),
-                "黄色": request.form.get("flavor_yellow", "グレープ").strip(),
+                "緑色": request.form.get("flavor_green", "グレープ").strip(),
+                "黄色": request.form.get("flavor_yellow", "パイン").strip(),
             }
 
             for bet in bets:
