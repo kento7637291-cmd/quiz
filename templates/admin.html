@@ -299,28 +299,28 @@
                                                             <form action="{{ url_for('quiz.admin_settle_event', event_id=e.event_id) }}" method="POST" class="d-flex align-items-center gap-1 border border-warning p-1.5 rounded bg-black">
                                                                 <span class="text-xs text-warning fw-bold px-1">正解味:</span>
                                                                 <select class="form-select form-select-xs bg-dark text-white py-0 border-danger" name="flavor_red" style="width:75px;" required title="赤の正解">
-                                                                    <option value="巨峰">赤:巨峰</option>
-                                                                    <option value="青りんご">赤:青りんご</option>
+                                                                    <option value="マンゴー" selected>赤:マンゴー</option>
                                                                     <option value="イチゴ">赤:イチゴ</option>
                                                                     <option value="グレープ">赤:グレープ</option>
+                                                                    <option value="パイン">赤:パイン</option>
                                                                 </select>
                                                                 <select class="form-select form-select-xs bg-dark text-white py-0 border-primary" name="flavor_blue" style="width:75px;" required title="青の正解">
-                                                                    <option value="イチゴ">青:イチゴ</option>
+                                                                    <option value="イチゴ" selected>青:イチゴ</option>
+                                                                    <option value="マンゴー">青:マンゴー</option>
                                                                     <option value="グレープ">青:グレープ</option>
-                                                                    <option value="巨峰">青:巨峰</option>
-                                                                    <option value="青りんご">青:青りんご</option>
+                                                                    <option value="パイン">青:パイン</option>
                                                                 </select>
                                                                 <select class="form-select form-select-xs bg-dark text-white py-0 border-success" name="flavor_green" style="width:75px;" required title="緑の正解">
-                                                                    <option value="イチゴ" selected>緑:イチゴ</option>
-                                                                    <option value="グレープ">緑:グレープ</option>
-                                                                    <option value="巨峰">緑:巨峰</option>
-                                                                    <option value="青りんご">青:青りんご</option>
+                                                                    <option value="グレープ" selected>緑:グレープ</option>
+                                                                    <option value="マンゴー">緑:マンゴー</option>
+                                                                    <option value="イチゴ">緑:イチゴ</option>
+                                                                    <option value="パイン">緑:パイン</option>
                                                                 </select>
                                                                 <select class="form-select form-select-xs bg-dark text-white py-0 border-warning" name="flavor_yellow" style="width:75px;" required title="黄の正解">
-                                                                    <option value="グレープ" selected>黄:グレープ</option>
+                                                                    <option value="パイン" selected>黄:パイン</option>
+                                                                    <option value="マンゴー">黄:マンゴー</option>
                                                                     <option value="イチゴ">黄:イチゴ</option>
-                                                                    <option value="巨峰">黄:巨峰</option>
-                                                                    <option value="青りんご">青:青りんご</option>
+                                                                    <option value="グレープ">黄:グレープ</option>
                                                                 </select>
                                                                 <button type="submit" class="btn btn-xs btn-warning fw-bold text-dark px-2 py-1">採点清算</button>
                                                             </form>
